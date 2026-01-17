@@ -13,10 +13,10 @@ A well-designed API is a joy to work with. Follow these principles to create API
 
 ### 1. Use Nouns, Not Verbs
 
-```
+\`\`\`
 ✅ GET /users
 ❌ GET /getUsers
-```
+\`\`\`
 
 ### 2. Use HTTP Methods Correctly
 
@@ -28,16 +28,16 @@ A well-designed API is a joy to work with. Follow these principles to create API
 
 ### 3. Version Your API
 
-```
+\`\`\`
 /api/v1/users
 /api/v2/users
-```
+\`\`\`
 
 ## Error Handling
 
 Always return meaningful error messages:
 
-```json
+\`\`\`json
 {
   "error": {
     "code": "VALIDATION_ERROR",
@@ -45,7 +45,7 @@ Always return meaningful error messages:
     "field": "email"
   }
 }
-```
+\`\`\`
 
 ## Conclusion
 

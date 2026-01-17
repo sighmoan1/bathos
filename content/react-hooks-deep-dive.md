@@ -13,29 +13,29 @@ React Hooks let you use state and other React features without writing a class. 
 
 ### useState
 
-```jsx
+\`\`\`jsx
 const [count, setCount] = useState(0)
-```
+\`\`\`
 
 ### useEffect
 
-```jsx
+\`\`\`jsx
 useEffect(() => {
   document.title = `Count: ${count}`
 }, [count])
-```
+\`\`\`
 
 ### useContext
 
-```jsx
+\`\`\`jsx
 const theme = useContext(ThemeContext)
-```
+\`\`\`
 
 ## Custom Hooks
 
 Create your own hooks to extract component logic:
 
-```jsx
+\`\`\`jsx
 function useWindowSize() {
   const [size, setSize] = useState({ width: 0, height: 0 })
   
@@ -49,7 +49,7 @@ function useWindowSize() {
   
   return size
 }
-```
+\`\`\`
 
 ## Conclusion
 

@@ -18,11 +18,11 @@ Next.js is a powerful React framework that enables you to build full-stack web a
 
 ## Quick Start
 
-```bash
+\`\`\`bash
 npx create-next-app@latest my-app
 cd my-app
 npm run dev
-```
+\`\`\`
 
 Your app will be running at `http://localhost:3000`.
 

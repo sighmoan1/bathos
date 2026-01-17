@@ -18,7 +18,7 @@ TypeScript is a typed superset of JavaScript that compiles to plain JavaScript. 
 
 ## Basic Types
 
-```typescript
+\`\`\`typescript
 // Primitive types
 let name: string = "John"
 let age: number = 30
@@ -34,7 +34,7 @@ interface User {
 }
 
 const user: User = { name: "John", age: 30 }
-```
+\`\`\`
 
 ## Conclusion
 
