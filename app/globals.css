@@ -3,6 +3,10 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* A phone held sideways has room for the card and almost nothing else.
+   `short:` strips the decoration back so the card still fits. */
+@custom-variant short (@media (max-height: 500px));
+
 /* Dark theme for TikTok-style blog reader */
 :root {
   --background: oklch(0.1 0 0);
@@ -91,8 +95,9 @@
   }
   body {
     @apply bg-background text-foreground;
-    /* Sideways two-finger swipes are card gestures here, not browser
-       back/forward navigation. */
-    overscroll-behavior-x: none;
+    /* Every direction is a card gesture here: sideways must not trigger
+       browser back/forward, and downward must not trigger pull-to-refresh
+       on Android — that gesture is "previous article". */
+    overscroll-behavior: none;
   }
 }

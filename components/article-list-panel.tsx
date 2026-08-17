@@ -55,10 +55,10 @@ export function ArticleListPanel({
       initial={{ opacity: 0, x: 300 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 300 }}
-      className="fixed inset-0 bg-background z-50 overflow-y-auto"
+      className="fixed inset-0 bg-background z-50 overflow-y-auto overscroll-contain"
     >
       {/* Header */}
-      <div className="sticky top-0 bg-background/80 backdrop-blur-lg border-b border-border z-10">
+      <div className="sticky top-0 bg-background/80 backdrop-blur-lg border-b border-border z-10 pt-[env(safe-area-inset-top)]">
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center gap-4">
           <button
             onClick={onClose}
@@ -81,7 +81,7 @@ export function ArticleListPanel({
       </div>
 
       {/* Content */}
-      <div className="max-w-3xl mx-auto px-4 py-8">
+      <div className="max-w-3xl mx-auto px-4 py-8 pb-[calc(2rem+env(safe-area-inset-bottom))]">
         {articles.length === 0 ? (
           <div className="text-center py-20">
             <EmptyIcon className="w-16 h-16 mx-auto text-muted-foreground/30 mb-4" />

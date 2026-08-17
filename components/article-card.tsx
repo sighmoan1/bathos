@@ -170,10 +170,10 @@ export function ArticleCard({
         )}
 
         {/* Card content - More compact layout */}
-        <div className="flex flex-col p-5">
+        <div className="flex flex-col p-5 short:p-3.5">
           {/* Tags */}
           {article.tags && article.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mb-3">
+            <div className="flex flex-wrap gap-1.5 mb-3 short:mb-2">
               {article.tags.slice(0, 3).map((tag) => (
                 <button
                   key={tag}
@@ -196,11 +196,13 @@ export function ArticleCard({
           <h2 className="text-xl font-bold text-foreground mb-2 leading-tight text-balance">{article.title}</h2>
 
           {/* Description */}
-          <p className="text-muted-foreground text-sm leading-relaxed line-clamp-3 mb-3">{article.description}</p>
+          <p className="text-muted-foreground text-sm leading-relaxed line-clamp-3 short:line-clamp-2 mb-3 short:mb-2">
+            {article.description}
+          </p>
 
           {/* Date */}
           {article.date && (
-            <p className="text-muted-foreground/60 text-xs mb-4">
+            <p className="text-muted-foreground/60 text-xs mb-4 short:hidden">
               {new Date(article.date).toLocaleDateString("en-US", {
                 year: "numeric",
                 month: "short",

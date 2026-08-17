@@ -209,18 +209,29 @@ export function SwipeFeed({ initialArticles, allTags }: SwipeFeedProps) {
   const savedArticles = initialArticles.filter((a) => saved.includes(a.slug))
   const trashedArticles = initialArticles.filter((a) => dismissed.includes(a.slug))
 
+  // Mobile browsers scroll the background behind a fixed overlay unless the
+  // body is pinned.
+  useEffect(() => {
+    if (!overlayOpen) return
+    const previous = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    return () => {
+      document.body.style.overflow = previous
+    }
+  }, [overlayOpen])
+
   if (!isLoaded) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-dvh flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-dvh bg-background">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-20 bg-background/80 backdrop-blur-lg border-b border-border">
+      <header className="fixed top-0 left-0 right-0 z-20 bg-background/80 backdrop-blur-lg border-b border-border pt-[env(safe-area-inset-top)]">
         <div className="max-w-md mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <h1 className="text-lg font-bold text-foreground">Swipe Reader</h1>
@@ -289,14 +300,20 @@ export function SwipeFeed({ initialArticles, allTags }: SwipeFeedProps) {
 
       <main
         ref={feedRef}
-        className={`${showFilters ? "pt-28" : "pt-16"} pb-32 px-4 min-h-screen flex flex-col items-center justify-center transition-[padding] duration-200`}
+        className={`${
+          showFilters
+            ? "pt-[calc(7rem+env(safe-area-inset-top))]"
+            : "pt-[calc(4rem+env(safe-area-inset-top))]"
+        } pb-[calc(8rem+env(safe-area-inset-bottom))] short:pb-[calc(4.5rem+env(safe-area-inset-bottom))] px-4 min-h-dvh flex flex-col items-center justify-center short:justify-start transition-[padding] duration-200`}
       >
-        <div className="w-full max-w-md relative py-14">
+        {/* The gutter reserves room for the peek cards; tighter on short
+            phones, where every pixel of card is worth more than the preview. */}
+        <div className="w-full max-w-md relative py-10 sm:py-14 short:py-0">
           {hasArticles ? (
             <>
               {/* Peek at the previous article */}
               {hasPrevious && (
-                <div className="absolute inset-x-6 top-0 z-0">
+                <div className="absolute inset-x-6 top-0 z-0 short:hidden">
                   <CardPeek article={articles[currentIndex - 1]} direction="up" onClick={handleSwipeDown} />
                 </div>
               )}
@@ -325,7 +342,7 @@ export function SwipeFeed({ initialArticles, allTags }: SwipeFeedProps) {
 
               {/* Peek at the next article */}
               {hasNext && (
-                <div className="absolute inset-x-6 bottom-0 z-0">
+                <div className="absolute inset-x-6 bottom-0 z-0 short:hidden">
                   <CardPeek article={articles[currentIndex + 1]} direction="down" onClick={handleSwipeUp} />
                 </div>
               )}
@@ -384,7 +401,7 @@ export function SwipeFeed({ initialArticles, allTags }: SwipeFeedProps) {
         </div>
 
         {hasArticles && (
-          <div className="fixed bottom-0 left-0 right-0 bg-background/80 backdrop-blur-lg border-t border-border py-3">
+          <div className="fixed bottom-0 left-0 right-0 bg-background/80 backdrop-blur-lg border-t border-border py-3 short:py-1.5 pb-[calc(0.75rem+env(safe-area-inset-bottom))] short:pb-[calc(0.375rem+env(safe-area-inset-bottom))]">
             <div className="max-w-md mx-auto px-4">
               <div className="grid grid-cols-4 gap-2 text-xs text-muted-foreground">
                 <ControlButton
@@ -516,8 +533,10 @@ function ControlButton({
       className="flex flex-col items-center gap-1 rounded-lg py-1 transition-opacity hover:opacity-80 active:scale-95 disabled:opacity-30 disabled:pointer-events-none"
     >
       <div className={`w-8 h-8 rounded-full flex items-center justify-center ${iconClassName}`}>{icon}</div>
-      <span>
-        {label} <span className="opacity-60">{hint}</span>
+      <span className="short:hidden">
+        {label}
+        {/* Keyboard hints mean nothing on a touch device. */}
+        <span className="opacity-60 hidden sm:inline"> {hint}</span>
       </span>
     </button>
   )

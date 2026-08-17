@@ -22,10 +22,10 @@ export function ArticleReader({ article, onClose, onSave, onDismiss, onTagClick 
       initial={{ opacity: 0, y: 50 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 50 }}
-      className="fixed inset-0 bg-background z-50 overflow-y-auto"
+      className="fixed inset-0 bg-background z-50 overflow-y-auto overscroll-contain"
     >
       {/* Header */}
-      <div className="sticky top-0 bg-background/80 backdrop-blur-lg border-b border-border z-10">
+      <div className="sticky top-0 bg-background/80 backdrop-blur-lg border-b border-border z-10 pt-[env(safe-area-inset-top)]">
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
           <button
             onClick={onClose}
@@ -54,7 +54,7 @@ export function ArticleReader({ article, onClose, onSave, onDismiss, onTagClick 
       </div>
 
       {/* Content */}
-      <article className="max-w-3xl mx-auto px-4 py-8 pb-20">
+      <article className="max-w-3xl mx-auto px-4 py-8 pb-[calc(5rem+env(safe-area-inset-bottom))]">
         {/* Tags */}
         {article.tags && article.tags.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-6">
