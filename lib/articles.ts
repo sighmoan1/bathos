@@ -61,6 +61,25 @@ export function getArticleBySlug(slug: string): Article | null {
   }
 }
 
+export interface TagCount {
+  tag: string
+  count: number
+}
+
+export function getAllTags(articles: Article[]): TagCount[] {
+  const counts = new Map<string, number>()
+
+  for (const article of articles) {
+    for (const tag of article.tags || []) {
+      counts.set(tag, (counts.get(tag) || 0) + 1)
+    }
+  }
+
+  return Array.from(counts, ([tag, count]) => ({ tag, count })).sort(
+    (a, b) => b.count - a.count || a.tag.localeCompare(b.tag),
+  )
+}
+
 export function shuffleArray<T>(array: T[]): T[] {
   const shuffled = [...array]
   for (let i = shuffled.length - 1; i > 0; i--) {

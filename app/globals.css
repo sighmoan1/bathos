@@ -91,5 +91,8 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* Sideways two-finger swipes are card gestures here, not browser
+       back/forward navigation. */
+    overscroll-behavior-x: none;
   }
 }

@@ -4,15 +4,19 @@ import { ArrowLeft, Bookmark, X } from "lucide-react"
 import type { Article } from "@/lib/articles"
 import ReactMarkdown from "react-markdown"
 import { motion } from "framer-motion"
+import { useEscapeKey } from "@/lib/use-feed-controls"
 
 interface ArticleReaderProps {
   article: Article
   onClose: () => void
   onSave: () => void
   onDismiss: () => void
+  onTagClick: (tag: string) => void
 }
 
-export function ArticleReader({ article, onClose, onSave, onDismiss }: ArticleReaderProps) {
+export function ArticleReader({ article, onClose, onSave, onDismiss, onTagClick }: ArticleReaderProps) {
+  useEscapeKey(true, onClose)
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 50 }}
@@ -55,12 +59,15 @@ export function ArticleReader({ article, onClose, onSave, onDismiss }: ArticleRe
         {article.tags && article.tags.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-6">
             {article.tags.map((tag) => (
-              <span
+              <button
                 key={tag}
-                className="px-3 py-1 bg-accent/50 text-accent-foreground text-xs font-medium rounded-full"
+                type="button"
+                onClick={() => onTagClick(tag)}
+                title={`Filter by "${tag}"`}
+                className="px-3 py-1 bg-accent/50 text-accent-foreground text-xs font-medium rounded-full hover:bg-accent transition-colors"
               >
                 {tag}
-              </span>
+              </button>
             ))}
           </div>
         )}
