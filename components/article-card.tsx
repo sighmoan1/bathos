@@ -3,7 +3,7 @@
 import { motion, useMotionValue, useTransform, type PanInfo } from "framer-motion"
 import { X, Bookmark, ArrowRight, ChevronUp, ChevronDown, Trash2 } from "lucide-react"
 import type { Article } from "@/lib/articles"
-import { useRef, useState, type MouseEvent as MouseEvent_ } from "react"
+import { forwardRef, useRef, useState, type MouseEvent as MouseEvent_ } from "react"
 
 interface ArticleCardProps {
   article: Article
@@ -19,19 +19,26 @@ interface ArticleCardProps {
   hasNext: boolean
 }
 
-export function ArticleCard({
-  article,
-  onSwipeLeft,
-  onSwipeRight,
-  onSwipeUp,
-  onSwipeDown,
-  onReadMore,
-  onTagClick,
-  selectedTags,
-  isTop,
-  hasPrevious,
-  hasNext,
-}: ArticleCardProps) {
+// forwardRef is load-bearing: AnimatePresence `mode="popLayout"` can only lift
+// an exiting child out of the document flow if it can attach a ref to it.
+// Without this the outgoing card keeps its space and shoves the incoming one
+// down the screen, further with every swipe.
+export const ArticleCard = forwardRef<HTMLDivElement, ArticleCardProps>(function ArticleCard(
+  {
+    article,
+    onSwipeLeft,
+    onSwipeRight,
+    onSwipeUp,
+    onSwipeDown,
+    onReadMore,
+    onTagClick,
+    selectedTags,
+    isTop,
+    hasPrevious,
+    hasNext,
+  },
+  ref,
+) {
   const x = useMotionValue(0)
   const y = useMotionValue(0)
 
@@ -102,6 +109,7 @@ export function ArticleCard({
 
   return (
     <motion.div
+      ref={ref}
       className="w-full"
       style={{
         x: isTop ? x : 0,
@@ -114,8 +122,11 @@ export function ArticleCard({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       initial={{ opacity: 0, scale: 0.9 }}
-      animate={exitDirection ? exitAnimations[exitDirection] : { opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      // The swipe direction belongs to the exit, not to `animate`. Driving both
+      // at once left the exit animation unresolved, so AnimatePresence never
+      // unmounted the card and they piled up.
+      exit={exitDirection ? exitAnimations[exitDirection] : { opacity: 0, scale: 0.9 }}
       transition={{ duration: 0.25 }}
     >
       <div className="relative w-full bg-card rounded-2xl border border-border overflow-hidden shadow-xl">
@@ -244,4 +255,4 @@ export function ArticleCard({
       </div>
     </motion.div>
   )
-}
+})
