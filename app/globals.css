@@ -105,3 +105,20 @@
 
 ::selection { background: var(--bathos-color-accent-light); color: var(--bathos-color-text); }
 :focus-visible { outline: 3px solid var(--bathos-color-focus); outline-offset: 3px; }
+
+/* The application owns the viewport; article prose keeps a readable measure. */
+.reader-shell { height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+.reader-shell > header { flex-shrink: 0; padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+.reader-feed { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.reader-deck { flex: 1; min-height: 0; padding: clamp(12px, 2vw, 32px); padding-left: max(clamp(12px, 2vw, 32px), env(safe-area-inset-left)); padding-right: max(clamp(12px, 2vw, 32px), env(safe-area-inset-right)); }
+.reader-current, .reader-card, .reader-card-surface { height: 100%; }
+.reader-card-surface { overflow-y: auto; }
+.reader-card-content { min-height: 100%; width: 100%; max-width: var(--bathos-wide); margin-inline: auto; padding: clamp(20px, 4vw, 64px); justify-content: center; }
+.reader-title { font-size: var(--bathos-text-heading); line-height: var(--bathos-line-heading); overflow-wrap: anywhere; }
+.reader-description { font-size: var(--bathos-text-lead); max-width: var(--bathos-measure); }
+.reader-card-actions { max-width: var(--bathos-reading-width); width: 100%; margin-top: clamp(12px, 4vh, 40px); }
+.reader-controls { flex-shrink: 0; background: var(--background); padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+.reader-controls button { min-height: var(--bathos-target-size); }
+@media (max-width: 600px) { .reader-title { font-size: clamp(1.6rem, 7vw, 2.5rem); } .reader-description { font-size: var(--bathos-text-body); } }
+@media (max-height: 500px) { .reader-deck { padding-block: 8px; } .reader-card-content { padding: 14px 20px; } .reader-title { font-size: 1.5rem; } .reader-description { font-size: 0.875rem; } .reader-card-actions { max-width: var(--bathos-reading-width); width: 100%; margin-top: 4px; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }

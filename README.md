@@ -68,3 +68,22 @@ The canonical catalogue is https://design.bathos.org. The reader consumes a pinn
 The Git-connected Cloudflare Pages project `bathos-web` builds `pnpm build` from main and publishes `out`. The former direct-upload `bathos` project is retained for rollback. Compatible release updates verify the consumer, open an adoption PR and merge it; Git-connected Pages builds deploy the resulting main revision. Major upgrades require deliberate review.
 
 Enable `DESIGN_SYSTEM_UPDATES_ENABLED=true` only after private-repository Actions billing is working and Actions may create update PRs. The updater runs reader verification and waits for hosting checks before merging. GitHub blocked the initial CI job before it started because account billing needs attention; local and Cloudflare-preview browser checks passed.
+
+## Install the reader
+
+The public reader fills the browser viewport on desktop and phones. Use the
+Install Bathos button for a browser install prompt or platform instructions.
+On iPhone/iPad, use Safari → Share → Add to Home Screen. On supported Android
+and desktop browsers, choose Install app from the browser menu.
+
+Visit online once before reading offline. The installed app opens the reader
+in a standalone window, and the exported articles and reader assets are cached
+together. Saved articles, hidden articles and filters remain on this device.
+Use **Update app** when offered to load a new release and its articles.
+The reader cache excludes sign-in, post management and API responses; the
+manager keeps its own offline shell and device drafts.
+
+Validation: `pnpm build`, `pnpm test:e2e`, `node --test tests/*.test.cjs`,
+`npm test --prefix workers/admin-oauth`, and the mobile manager browser check.
+A real device installation check is still needed to verify native home-screen
+and standalone behavior.
