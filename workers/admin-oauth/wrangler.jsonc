@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "bathos-admin-oauth",
+  "main": "index.mjs",
+  "compatibility_date": "2026-10-12",
+  "workers_dev": false,
+  "routes": [{ "pattern": "bathos.org/api/*", "zone_name": "bathos.org" }],
+  "vars": {
+    "CMS_ORIGIN": "https://bathos.org",
+    "OAUTH_ORIGIN": "https://bathos.org",
+    "GITHUB_REPOSITORY": "sighmoan1/bathos"
+  },
+  "observability": { "enabled": true, "logs": { "enabled": true, "invocation_logs": false }, "traces": { "enabled": false } }
+}

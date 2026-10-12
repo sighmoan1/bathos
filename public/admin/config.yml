@@ -1,0 +1,29 @@
+backend:
+  name: github
+  repo: sighmoan1/bathos
+  branch: main
+  base_url: https://bathos.org
+  auth_endpoint: api/auth
+  auth_scope: repo
+publish_mode: simple
+site_url: https://bathos.org
+show_preview_links: false
+media_folder: public/images/uploads
+public_folder: /images/uploads
+collections:
+  - name: posts
+    label: Posts
+    label_singular: Post
+    folder: content
+    create: true
+    delete: true
+    extension: md
+    format: frontmatter
+    slug: "{{slug}}"
+    summary: "{{title}}"
+    fields:
+      - {label: Title, name: title, widget: string}
+      - {label: Description, name: description, widget: text}
+      - {label: Date, name: date, widget: datetime, date_format: "YYYY-MM-DD", time_format: false, format: "YYYY-MM-DD", required: false}
+      - {label: Tags, name: tags, widget: list, required: false}
+      - {label: Body, name: body, widget: markdown}
