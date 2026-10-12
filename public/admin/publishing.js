@@ -81,12 +81,18 @@
 
   async function github(path) {
     if (!backend?.token) throw new Error('signed-out');
-    const response = await fetch('https://api.github.com/repos/' + REPO + path, {
-      headers: { Authorization: 'Bearer ' + backend.token, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' },
-      cache: 'no-store', referrerPolicy: 'no-referrer',
-    });
-    if (!response.ok) throw new Error(response.status === 429 || (response.status === 403 && response.headers.get('x-ratelimit-remaining') === '0') ? 'rate-limit' : 'unavailable');
-    return response.json();
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    try {
+      const response = await fetch('https://api.github.com/repos/' + REPO + path, {
+        headers: { Authorization: 'Bearer ' + backend.token, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' },
+        cache: 'no-store', referrerPolicy: 'no-referrer', signal: controller.signal,
+      });
+      if (!response.ok) throw new Error(response.status === 429 || (response.status === 403 && response.headers.get('x-ratelimit-remaining') === '0') ? 'rate-limit' : 'unavailable');
+      return await response.json();
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 
   function render(result, sha) {

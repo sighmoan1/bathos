@@ -43,12 +43,19 @@ function browserHarness() {
   let responses = [];
   let requests = 0;
   const context = {
-    URL, Date: { now: () => now },
+    URL, AbortController, Date: { now: () => now },
     document: { hidden: false, createElement: element, getElementById: id => elements[id], body: { prepend() {} } },
     CMS: { getBackend: () => factory, registerEventListener: ({ name, handler }) => { events[name] = handler; } },
     setTimeout: (handler, delay) => { const id = nextTimer++; timers.set(id, { handler, due: now + delay }); return id; },
     clearTimeout: id => timers.delete(id),
-    fetch: async (url, options) => { requests++; assert.equal(options.headers.Authorization, 'Bearer test-credential'); const body = await responses.shift(); return { ok: true, json: async () => body }; },
+    fetch: async (url, options) => {
+      requests++;
+      assert.equal(options.headers.Authorization, 'Bearer test-credential');
+      const next = responses.shift();
+      const aborted = new Promise((resolve, reject) => options.signal.addEventListener('abort', () => reject(new Error('network request aborted'))));
+      const body = await Promise.race([typeof next === 'function' ? next() : Promise.resolve(next), aborted]);
+      return { ok: true, json: async () => body };
+    },
   };
   context.window = context;
   vm.runInNewContext(fs.readFileSync(require.resolve('../public/admin/publishing.js'), 'utf8'), context);
@@ -101,4 +108,38 @@ test('successful deletion invalidates build status; signed-out checks make no AP
   await browser.backend.deleteFiles(['content/post.md']);
   assert.match(browser.elements['git-save-status'].textContent, /Deletion saved to Git/);
   assert.equal(browser.requests(), 0);
+});
+
+test('network rejection shows unavailable and restores manual check after throttle', async () => {
+  const browser = browserHarness();
+  browser.responses([() => Promise.reject(new Error('private upstream details'))]);
+  browser.elements['deployment-refresh'].click();
+  await settle();
+  assert.equal(browser.elements.panel.dataset.state, 'unknown');
+  assert.match(browser.elements['deployment-status'].textContent, /status unavailable/);
+  assert.doesNotMatch(browser.elements['deployment-status'].textContent, /private upstream details/);
+  assert.equal(browser.elements['deployment-refresh'].disabled, true);
+  browser.advance(60000);
+  assert.equal(browser.elements['deployment-refresh'].disabled, false);
+  browser.responses([{ sha }, { check_runs: [run] }]);
+  browser.elements['deployment-refresh'].click();
+  await settle();
+  assert.equal(browser.elements.panel.dataset.state, 'success');
+});
+test('stalled network aborts at fifteen seconds and later checks recover', async () => {
+  const browser = browserHarness();
+  browser.responses([new Promise(() => {})]);
+  browser.elements['deployment-refresh'].click();
+  await settle();
+  browser.advance(15000);
+  await settle();
+  assert.equal(browser.elements.panel.dataset.state, 'unknown');
+  assert.match(browser.elements['deployment-status'].textContent, /status unavailable/);
+  assert.equal(browser.elements['deployment-refresh'].disabled, true);
+  browser.advance(45000);
+  assert.equal(browser.elements['deployment-refresh'].disabled, false);
+  browser.responses([{ sha }, { check_runs: [run] }]);
+  browser.elements['deployment-refresh'].click();
+  await settle();
+  assert.equal(browser.elements.panel.dataset.state, 'success');
 });
