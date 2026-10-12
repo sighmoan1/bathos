@@ -1,3 +1,4 @@
+@import "@bathos/design-system/styles/foundation.css";
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -21,7 +22,7 @@
   --secondary-foreground: oklch(0.95 0 0);
   --muted: oklch(0.25 0 0);
   --muted-foreground: oklch(0.65 0 0);
-  --accent: oklch(0.7 0.15 200);
+  --accent: var(--bathos-color-accent-light);
   --accent-foreground: oklch(0.1 0 0);
   --destructive: oklch(0.6 0.2 25);
   --destructive-foreground: oklch(0.95 0 0);
@@ -29,26 +30,26 @@
   --success-foreground: oklch(0.1 0 0);
   --border: oklch(0.25 0 0);
   --input: oklch(0.2 0 0);
-  --ring: oklch(0.7 0.15 200);
+  --ring: var(--bathos-color-focus);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --radius: 1rem;
+  --radius: var(--bathos-radius-large);
   --sidebar: oklch(0.12 0 0);
   --sidebar-foreground: oklch(0.95 0 0);
-  --sidebar-primary: oklch(0.7 0.15 200);
+  --sidebar-primary: var(--bathos-color-accent-light);
   --sidebar-primary-foreground: oklch(0.1 0 0);
   --sidebar-accent: oklch(0.2 0 0);
   --sidebar-accent-foreground: oklch(0.95 0 0);
   --sidebar-border: oklch(0.25 0 0);
-  --sidebar-ring: oklch(0.7 0.15 200);
+  --sidebar-ring: var(--bathos-color-focus);
 }
 
 @theme inline {
-  --font-sans: "Geist", "Geist Fallback";
-  --font-mono: "Geist Mono", "Geist Mono Fallback";
+  --font-sans: var(--bathos-font-body);
+  --font-mono: var(--bathos-font-mono);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);

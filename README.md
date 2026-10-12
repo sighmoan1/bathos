@@ -47,3 +47,9 @@ Continue building your app on:
 2. Deploy your chats from the v0 interface
 3. Changes are automatically pushed to this repository
 4. Vercel deploys the latest version from this repository
+
+## Shared Bathos design system
+
+The canonical catalogue is https://design.bathos.org. The reader consumes a pinned `@bathos/design-system` release and maps namespaced typography, radius, lavender selection and amber focus tokens into its existing dark theme. Recipes, reading controls, saved articles and trash retain their behaviour. `pnpm verify` builds the static export and checks desktop/Android reader navigation.
+
+The Git-connected Cloudflare Pages project `bathos-web` builds `pnpm build` from main and publishes `out`. The former direct-upload `bathos` project is retained for rollback. Compatible release updates verify the consumer, open an adoption PR and merge it; Git-connected Pages builds deploy the resulting main revision. Major upgrades require deliberate review.
