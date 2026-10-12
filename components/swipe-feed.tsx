@@ -258,7 +258,7 @@ export function SwipeFeed({ initialArticles, allTags }: SwipeFeedProps) {
               </button>
               <button
                 onClick={() => setShowTrash(true)}
-                aria-label="Open trash"
+                aria-label="Open articles hidden on this device"
                 className="relative p-2 rounded-lg hover:bg-secondary transition-colors"
               >
                 <Trash2 className="w-5 h-5 text-foreground" />
@@ -480,11 +480,11 @@ export function SwipeFeed({ initialArticles, allTags }: SwipeFeedProps) {
       <AnimatePresence>
         {showTrash && (
           <ArticleListPanel
-            title="Trash"
+            title="Hidden on this device"
             articles={trashedArticles}
             emptyIcon={Trash2}
-            emptyTitle="Trash is empty"
-            emptyHint="Swipe left (or press ←) on articles to bin them"
+            emptyTitle="No hidden articles"
+            emptyHint="Swipe left (or press ←) to hide articles on this device"
             onClose={() => setShowTrash(false)}
             onSelect={(article) => {
               setReadingArticle(article)
@@ -502,7 +502,7 @@ export function SwipeFeed({ initialArticles, allTags }: SwipeFeedProps) {
               label: "Restore all",
               onAction: handleRestoreAll,
             }}
-            footnote="Binned articles stay here until you restore them — nothing is deleted permanently."
+            footnote="This hides articles only in this browser. Posts remain on the site for everyone else. Restore them here at any time."
           />
         )}
       </AnimatePresence>
