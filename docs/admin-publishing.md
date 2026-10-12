@@ -1,5 +1,7 @@
 # Publishing and recovering posts
 
+The Decap controls described below are historical. Use the [current post manager](post-manager.md) at `/manage/`; Git recovery instructions still apply.
+
 On your phone, open [bathos.org/admin/](https://bathos.org/admin/), sign in with GitHub, choose **Posts**, and create a post or open an existing one. Fill in its fields, switch between editing and preview, and save. To remove a post, open it and choose **Delete**. Decap asks for confirmation before deleting, including a warning if you have unsaved edits. Cancel that prompt to keep the post.
 
 A successful save means the Markdown change is committed to the repository's `main` branch. A successful delete removes the Markdown file from `main`. Neither action immediately updates the public site. Cloudflare Pages must build and deploy that commit first. The reader's trash is different: it only hides posts in that browser and does not change the repository or anyone else's feed.

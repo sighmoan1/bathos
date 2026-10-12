@@ -1,3 +1,4 @@
+import { manageRequest, sealSession, sessionCookie } from './manager.mjs';
 const COOKIE = '__Host-bathos-oauth';
 const TTL = 600;
 const baseHeaders = { 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer', 'X-Content-Type-Options': 'nosniff' };
@@ -39,8 +40,9 @@ if(window.opener){
 }
 export async function handleRequest(request, env, upstream = fetch) {
   const url = new URL(request.url);
+  if (!['/api/auth', '/api/login', '/api/callback'].includes(url.pathname)) return manageRequest(request, env, upstream);
   if (request.method !== 'GET') return text('Method not allowed', 405);
-  if (!['/api/auth', '/api/callback'].includes(url.pathname)) return text('Not found', 404);
+  if (!['/api/auth', '/api/login', '/api/callback'].includes(url.pathname)) return text('Not found', 404);
   let origin;
   try {
     origin = new URL(env.CMS_ORIGIN).origin;
@@ -48,19 +50,24 @@ export async function handleRequest(request, env, upstream = fetch) {
   } catch { return text('Authentication is not configured', 503); }
   if (!env.GITHUB_CLIENT_ID || !env.GITHUB_CLIENT_SECRET || !env.GITHUB_REPOSITORY) return text('Authentication is not configured', 503);
   const callback = `${env.OAUTH_ORIGIN}/api/callback`;
-  if (url.pathname === '/api/auth') {
-    if (url.searchParams.get('provider') !== 'github') return text('Unsupported provider', 400);
-    if (url.searchParams.get('site_id') !== new URL(origin).hostname) return text('Invalid editor origin', 400);
+  if (['/api/auth', '/api/login'].includes(url.pathname)) {
+    const manage = url.pathname === '/api/login';
+    if (manage && !env.SESSION_SECRET) return text('Post management is not configured', 503);
+    if (!manage && url.searchParams.get('provider') !== 'github') return text('Unsupported provider', 400);
+    if (!manage && url.searchParams.get('site_id') !== new URL(origin).hostname) return text('Invalid editor origin', 400);
     const state = random();
     const verifier = random();
     const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
     const challenge = btoa(String.fromCharCode(...new Uint8Array(digest))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     const authorization = new URL('https://github.com/login/oauth/authorize');
     authorization.search = new URLSearchParams({ client_id: env.GITHUB_CLIENT_ID, redirect_uri: callback, scope: 'repo', state, code_challenge: challenge, code_challenge_method: 'S256' }).toString();
-    return new Response(null, { status: 302, headers: { ...baseHeaders, Location: authorization.href, 'Set-Cookie': cookie(encode({ state, verifier, expires: Date.now() + TTL * 1000 })) } });
+    return new Response(null, { status: 302, headers: { ...baseHeaders, Location: authorization.href, 'Set-Cookie': cookie(encode({ state, verifier, flow: manage ? 'manage' : 'decap', expires: Date.now() + TTL * 1000 })) } });
   }
   const saved = decode((request.headers.get('Cookie') || '').split(';').map(v => v.trim()).find(v => v.startsWith(`${COOKIE}=`))?.slice(COOKIE.length + 1));
   if (!saved || typeof saved.verifier !== 'string' || !Number.isFinite(saved.expires) || saved.expires < Date.now() || !(await equal(saved.state, url.searchParams.get('state')))) return text('Invalid or expired sign-in state. Start again from the editor.', 400, true);
+  const manage = saved.flow === 'manage';
+  const managedError = reason => new Response(null, { status: 303, headers: { ...baseHeaders, Location: `${origin}/manage/?auth_error=${reason}`, 'Set-Cookie': cookie('', 0) } });
+  if (manage && url.searchParams.has('error')) return managedError('denied');
   if (url.searchParams.has('error')) return popup(origin, { message: 'GitHub sign in was cancelled or denied.' }, false);
   const code = url.searchParams.get('code');
   if (!code) return text('Missing authorization code', 400, true);
@@ -75,11 +82,21 @@ export async function handleRequest(request, env, upstream = fetch) {
       headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${token.access_token}`, 'User-Agent': 'bathos-admin-oauth', 'X-GitHub-Api-Version': '2022-11-28' }, signal: AbortSignal.timeout(10000),
     });
     const access = await repository.json();
-    if (!repository.ok || access.permissions?.push !== true) return popup(origin, { message: 'Your GitHub account does not have write access to this repository.' }, false);
+    if (!repository.ok || access.permissions?.push !== true) return manage ? managedError('permission') : popup(origin, { message: 'Your GitHub account does not have write access to this repository.' }, false);
+    if (manage) {
+      const userResponse = await upstream('https://api.github.com/user', { headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${token.access_token}`, 'User-Agent': 'bathos-post-manager', 'X-GitHub-Api-Version': '2022-11-28' }, signal: AbortSignal.timeout(10000) });
+      const user = await userResponse.json();
+      if (!userResponse.ok || typeof user.login !== 'string') throw Error('user');
+      const response = new Response(null, { status: 303, headers: { ...baseHeaders, Location: `${origin}/manage/` } });
+      response.headers.append('Set-Cookie', cookie('', 0));
+      response.headers.append('Set-Cookie', sessionCookie(await sealSession(env, token.access_token, user.login)));
+      return response;
+    }
     return popup(origin, { token: token.access_token, provider: 'github' }, true);
   } catch {
     // Never log OAuth codes, tokens, request URLs or upstream response bodies.
     console.error(JSON.stringify({ event: 'oauth_failed' }));
+    if (manage) return managedError('failed');
     return popup(origin, { message: 'Sign in failed. Try again from the editor.' }, false);
   }
 }

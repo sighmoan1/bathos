@@ -1,0 +1,15 @@
+{
+  "id": "/manage/",
+  "name": "Bathos Posts",
+  "short_name": "Posts",
+  "description": "Write and manage your Bathos posts.",
+  "start_url": "/manage/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f7f3eb",
+  "theme_color": "#f7f3eb",
+  "icons": [
+    { "src": "/manage/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/manage/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

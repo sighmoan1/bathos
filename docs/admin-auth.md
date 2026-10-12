@@ -1,38 +1,27 @@
-# GitHub authentication for the post editor
+# GitHub authentication for the post manager
 
-The static site exports `/admin/`. Decap CMS 3.9.0 is pinned with Subresource Integrity and edits `content/*.md` on `main`; title, description, optional date and tags, and Markdown body match `lib/articles.ts`. Create, save and delete commit directly to GitHub. There is no draft publication workflow. GitHub remains the authority for write access; branch rules still apply.
+The installable mobile post manager lives at `/manage/`; `/admin/` redirects there. The static Pages site calls a same-origin Cloudflare Worker at `/api/*`. GitHub remains the authority for access and stores Markdown posts under `content/` on `main`. Publishing and deletion commit to GitHub and take effect after a successful Pages deployment.
 
-## Required production setup
+## Production configuration
 
-Authentication is not usable until an owner configures an OAuth app and the Worker secrets. No credentials are included in this repository.
+The existing [Bathos OAuth app](https://github.com/settings/applications/3927167) uses `https://bathos.org/api/callback`. Its homepage can be `https://bathos.org/manage/`. The Worker needs the public client ID binding `GITHUB_CLIENT_ID` and two server-only secrets: `GITHUB_CLIENT_SECRET` and `SESSION_SECRET`. `SESSION_SECRET` must be a base64-encoded cryptographically random 32-byte key. Configure the client ID as a plain-text Worker binding and each secret using `wrangler secret put` from `workers/admin-oauth`; never commit secret values or put them in chat or frontend settings. Rotating the session key invalidates existing manager sessions. Existing GitHub client credentials remain reusable.
 
-1. In GitHub Settings → Developer settings → OAuth Apps, create a new OAuth app. Set homepage `https://bathos.org/admin/` and authorization callback `https://bathos.org/api/callback`. Disable **Expire user access tokens**: this Decap integration does not refresh expiring GitHub tokens. Revoke the OAuth authorization in GitHub when you need to invalidate a session.
-2. From `workers/admin-oauth`, run `npm ci`, then set secrets with `npx wrangler secret put GITHUB_CLIENT_ID` and `npx wrangler secret put GITHUB_CLIENT_SECRET`. Enter values interactively; never commit them or paste them into frontend config.
-3. Run `npm test` and `npx wrangler deploy`. The route `bathos.org/api/*` must be attached to the Cloudflare zone hosting the proxied site. The site itself remains a static Pages export; this Worker handles only `/api/auth` and `/api/callback`.
-4. Verify Pages deploys `main` automatically, open `https://bathos.org/admin/`, allow the sign-in popup, and authenticate as an account with write access. Test a new temporary post, update it, delete it, and confirm the public deployment reflects each commit. Also test a GitHub account without repository write access; authentication must be refused.
+The Worker configuration fixes `CMS_ORIGIN` and `OAUTH_ORIGIN` to `https://bathos.org`, the repository to `sighmoan1/bathos`, and the route to `bathos.org/api/*`. Localhost and preview domains cannot mutate the production repository. The manager depends on same-origin cookies and cannot use a separate API origin.
 
-This repository is private, so the OAuth app requests GitHub's `repo` scope. GitHub OAuth scope can grant access to other repositories available to that account; the token is **not** restricted to Bathos. This Worker checks write access to `sighmoan1/bathos` before releasing it to Decap. Decap uses the token in the browser to call GitHub and may persist its login locally. Use a trusted device, log out when finished, and revoke the OAuth app in GitHub to invalidate access. The OAuth client secret is server-only; the user access token necessarily reaches the editor.
+## Session and request protection
 
-The flow uses PKCE with an S256 challenge and an HttpOnly verifier cookie. The callback checks a random ten-minute state bound to a Secure, HttpOnly, SameSite=Lax host cookie. It clears the cookie, confirms GitHub repository push permissions, and uses Decap's `authorizing:github` handshake followed by `authorization:github:success:{...}`. Messages require the exact configured CMS origin and opener window, never `*`. Callback pages use no-store, no-referrer and a nonce Content Security Policy. Errors do not expose upstream responses, codes or secrets. Invocation logs and traces are disabled because they can capture OAuth callback query strings; only sanitized application error events are logged. A denied OAuth request delivers an error to the editor.
+`GET /api/login` opens GitHub in the same window. OAuth uses an S256 PKCE challenge and a ten-minute Secure, HttpOnly, SameSite=Lax `__Host-bathos-oauth` state/verifier cookie. The callback validates state, exchanges the code server-side, verifies repository push permission, and retrieves the account login. It then redirects to `/manage/` with a seven-day Secure, HttpOnly, SameSite=Lax `__Host-bathos-session` cookie. That cookie contains an AES-GCM encrypted GitHub token, login and expiry, bound to the configured origin. The token never appears in manager JavaScript, browser storage or JSON responses.
 
-## Activation of the existing OAuth app
+Every mutation requires the exact `Origin: https://bathos.org`. Post writes additionally require JSON, have a 128 KiB request limit, validate the complete field schema, and restrict filenames to lowercase letters, numbers and hyphens under `content/*.md`. Updates and deletions require the current GitHub blob SHA; conflicts return HTTP 409 without retrying. GitHub calls have ten-second timeouts. Errors contain generic messages rather than upstream bodies or secrets. Responses use `Cache-Control: no-store` and the manager service worker excludes all API requests from caching.
 
-The owner has created [Bathos post editor](https://github.com/settings/applications/3927167)
-and deployed the `bathos-admin-oauth` Worker. If authentication reports configuration
-unavailable, the remaining required secret is `GITHUB_CLIENT_SECRET`. On that GitHub
-app's settings page, generate a new client secret. From `workers/admin-oauth`, run
-`npm ci` and then `npx wrangler secret put GITHUB_CLIENT_SECRET`; paste it only into
-the interactive terminal prompt. Never paste it into chat, commit it, or put it in
-frontend settings. Confirm the Worker has the correct client ID, route and origins,
-then perform the authorized and unauthorized login checks above. An owner must
-complete this secret setup before mobile sign-in is usable.
+`GET /api/session` reports only authentication and the account login. `POST /api/logout` clears the session cookie. Revoking the app authorization in GitHub invalidates its token. The cookie otherwise expires after seven days; user tokens are never refreshed automatically. This private repository requires GitHub OAuth's `repo` scope, which can cover other repositories available to the account, while Worker API calls target only the configured Bathos repository.
 
-## Alternative authentication origin
+The old `/api/auth` popup endpoint remains for compatibility with legacy Decap clients. It retains the older browser-token handshake and is not used by the new manager. Invocation logging and tracing remain disabled to avoid capturing OAuth callback query strings; sanitized OAuth failure events are logged.
 
-The same-origin route is the default. If using a separate HTTPS Worker domain, change `backend.base_url` in `public/admin/config.yml`, `OAUTH_ORIGIN` in the Worker config, the Worker route, and the GitHub callback URL together. Keep `CMS_ORIGIN` equal to the exact editor origin (no trailing slash). The callback must have the same origin as `backend.base_url` because Decap checks it. Preview domains and localhost cannot authenticate against production by design; configure a separate OAuth app and Worker for a separate trusted editor origin.
+## Verification and deployment
 
-## Local checks
+Install root dependencies and run `npm ci && npm test` in `workers/admin-oauth`. Tests mock GitHub and cover OAuth/PKCE, write permission, cookie confidentiality and expiry, CSRF origin checks, UTF-8 YAML serialization, safe filenames, request limits, optimistic conflicts and deployment matching. `npx wrangler deploy --dry-run` verifies the Worker bundle. Deploy the Worker with all secret bindings preserved, then build/deploy the static Pages site.
 
-Run `npm ci && npm test` in `workers/admin-oauth`; tests mock upstream GitHub responses and cover state rejection, cancelled authorization, denied access, the message contract and token escaping. `npx wrangler deploy --dry-run` validates packaging without deployment. `pnpm build` at the repository root includes admin assets in `out/admin/`.
+Live acceptance requires signing in as a repository writer, creating a temporary post, editing it and deleting it, and checking the corresponding deployment status. Also verify that an account without repository push permission is denied. The manager reports failures and keeps device drafts; offline edits require connection before publishing.
 
-Protocol reference: [Decap GitHub backend](https://decapcms.org/docs/github-backend/), [Decap authenticator source](https://github.com/decaporg/decap-cms/blob/main/packages/decap-cms-lib-auth/src/netlify-auth.js), [Cloudflare Worker secrets](https://developers.cloudflare.com/workers/configuration/secrets/).
+References: [GitHub OAuth web flow](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps), [GitHub repository contents API](https://docs.github.com/en/rest/repos/contents), [Cloudflare Worker secrets](https://developers.cloudflare.com/workers/configuration/secrets/), [Workers Web Crypto](https://developers.cloudflare.com/workers/runtime-apis/web-crypto/).

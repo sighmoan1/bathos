@@ -2,15 +2,15 @@
 
 ## Manage posts from your phone
 
-Open [bathos.org/admin/](https://bathos.org/admin/) and sign in with GitHub using
-an account with repository write access. Choose **Posts** to create a post,
-open one to edit, or choose **Delete** and confirm to remove it. Save commits
-the Markdown to Git; publication waits for a successful Cloudflare deployment.
-Use **Check deployment** and **Open public site** to verify the update.
+Open [bathos.org/manage/](https://bathos.org/manage/) and sign in with GitHub
+using an account with repository write access. Create, preview, update and delete
+posts in the mobile editor. Add it to your home screen for an app-like window;
+local drafts remain available offline after the first online visit. Saving and
+publishing require a connection and a successful Cloudflare deployment.
 
-See [admin authentication setup](docs/admin-auth.md) and
-[publishing, deployment status, and recovery](docs/admin-publishing.md).
-The reader's trash only hides posts in that browser.
+See [installation, draft recovery and release checks](docs/post-manager.md) and
+[authentication setup](docs/admin-auth.md). The reader's trash only hides posts
+in that browser.
 
 ## Cloudflare Pages
 
