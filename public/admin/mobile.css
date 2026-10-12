@@ -1,0 +1,65 @@
+/* Scoped to Decap 3.9.0's Emotion component labels. Recheck on CMS upgrades. */
+@media (max-width: 767px) {
+  html, body { margin: 0; width: 100%; }
+  #nc-root { width: 100%; overflow-wrap: anywhere; }
+  #nc-root *, #nc-root *::before, #nc-root *::after { box-sizing: border-box; }
+  #nc-root [class*="-AppMainContainer"],
+  #nc-root [class*="-AppHeaderContent"],
+  #nc-root [class*="-EditorContainer"],
+  #nc-root [class*="-ToolbarContainer"] { min-width: 0; max-width: 100%; }
+  #nc-root button, #nc-root [role="button"], #nc-root [role="menuitem"],
+  #nc-root [class*="-SidebarNavLink"], #nc-root [class*="-ToolbarSectionBackLink"] {
+    min-height: 44px;
+  }
+  #nc-root button { min-width: 44px; }
+  #nc-root:has([class*="-EditorContainer"]) header { display: none; }
+  #nc-root div:has(> input[type="datetime-local"]), #nc-root div:has(> input[type="date"]) { flex-wrap: wrap; gap: 8px; }
+  #nc-root input[type="datetime-local"], #nc-root input[type="date"] { width: 100%; min-width: 0; }
+  #nc-root [data-testid="now-button"], #nc-root [data-testid="clear-button"] { padding: 8px 12px; }
+  #nc-root [class*="-ToolbarContainer"] { flex-wrap: wrap; gap: 8px; }
+  #nc-root input, #nc-root textarea, #nc-root [contenteditable="true"] {
+    font-size: 16px; /* Avoid iOS input zoom. */
+    max-width: 100%;
+  }
+  #nc-root [class*="-AppHeaderContent"] { flex-wrap: wrap; padding: 0 4px; }
+  #nc-root [class*="-AppHeaderButton"] { padding: 12px 8px; }
+  #nc-root [class*="-CollectionContainer"] { margin: 12px; }
+  #nc-root [class*="-SidebarContainer"] { position: relative; width: 100%; max-height: none; margin-bottom: 12px; }
+  #nc-root [class*="-PaginationMessage"], #nc-root [class*="-Entries"], #nc-root [class*="-EntryCard"] { max-width: 100%; }
+  #nc-root [class*="-CollectionMain"] { padding-left: 0; min-width: 0; }
+  #nc-root [class*="-CollectionTop"], #nc-root [class*="-CollectionControls"] { flex-wrap: wrap; gap: 8px; }
+  #nc-root [class*="-EditorContainer"] {
+    position: fixed;
+    top: var(--bathos-viewport-top, 0px);
+    height: var(--bathos-viewport-height, 100dvh);
+    padding-top: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  #nc-root [class*="-EditorContainer"] > [class*="-ToolbarContainer"] {
+    position: relative;
+    height: auto;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    padding: 4px max(4px, env(safe-area-inset-right)) 4px max(4px, env(safe-area-inset-left));
+  }
+  #nc-root [class*="-ToolbarSection"] { height: auto; min-height: 44px; }
+  #nc-root [class*="-ToolbarSectionBackLink"] { width: calc(100% - 52px); border: 0; padding: 4px 8px; }
+  #nc-root [class*="-ToolbarSectionMeta"] { position: absolute; right: 4px; top: 4px; border: 0; padding: 0; }
+  #nc-root [class*="-ToolbarSectionMain"] { flex: 1 1 100%; padding: 4px; flex-wrap: wrap; gap: 4px; border: 0; }
+  #nc-root [class*="-ToolbarSubSection"] { flex-wrap: wrap; gap: 4px; }
+  #nc-root [class*="-ToolbarSectionMain"] button { margin: 0; padding-left: 12px; padding-right: 12px; }
+  #nc-root [class*="-EditorContainer"] > [class*="-Editor "] { flex: 1 1 auto; height: auto; min-height: 0; width: 100%; margin: 0; padding-top: 52px; }
+  #nc-root [class*="-ViewControls"] { top: 4px; right: 8px; display: flex; gap: 8px; }
+  #nc-root [class*="-ViewControls"] button { margin: 0; }
+  #nc-root [class*="-ViewControls"] button[title="Sync scrolling"] { display: none; }
+  #nc-root .bathos-preview-toggle { display: flex; align-items: center; gap: 8px; width: auto; padding: 8px 12px; }
+  #nc-root .bathos-preview-toggle::after { content: 'Preview'; font-size: 14px; }
+  #nc-root .bathos-preview-toggle[aria-expanded="true"]::after { content: 'Edit post'; }
+  #nc-root .SplitPane { min-width: 0 !important; width: 100% !important; }
+  #nc-root .SplitPane > .Pane1, #nc-root .SplitPane > .Resizer { display: none; }
+  #nc-root .SplitPane > .Pane2 { width: 100% !important; min-width: 0 !important; }
+  #nc-root [class*="-ControlPaneContainer"] { padding-left: 8px; padding-right: 8px; }
+  #nc-root [class*="-ControlPaneContainer"] > * { max-width: 100%; }
+  #nc-root iframe { max-width: 100%; }
+}
