@@ -11,6 +11,8 @@
     // Vercel and unrelated CI, even if they succeeded on the same commit.
     const matches = runs.filter(run => run.head_sha === sha &&
       run.name === 'Cloudflare Pages' && run.app?.slug === 'cloudflare-workers-and-pages' &&
+      Array.isArray(run.pull_requests) && run.pull_requests.length === 0 &&
+      !/Branch Preview URL/i.test(run.output?.summary || '') &&
       projectURL(run.details_url));
     const latest = matches.sort((a, b) => Number(b.id) - Number(a.id))[0];
     if (!latest) return { state: 'unknown', message: 'No deployment check found. This commit may not be live.' };
@@ -41,7 +43,8 @@
     '<p id="deployment-status" role="status">Sign in, then check deployment status.</p>' +
     '<div><button type="button" id="deployment-refresh">Check deployment</button> ' +
     '<a href="https://bathos.org/" target="_blank" rel="noopener noreferrer">Open public site</a> · ' +
-    '<a href="https://github.com/' + REPO + '/commits/main/" target="_blank" rel="noopener noreferrer">Git history and recovery</a></div>';
+    '<a href="https://github.com/' + REPO + '/commits/main/" target="_blank" rel="noopener noreferrer">Git history</a> · ' +
+    '<a href="https://github.com/' + REPO + '/blob/main/docs/admin-publishing.md" target="_blank" rel="noopener noreferrer">Recovery steps</a></div>';
   const shell = document.getElementById('admin-shell');
   if (shell) shell.insertAdjacentElement('afterend', panel);
   else document.body.prepend(panel);

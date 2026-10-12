@@ -2,9 +2,9 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { deploymentState, projectURL } = require('../public/admin/publishing.js');
 const sha = 'a'.repeat(40);
-const run = { id: 1, head_sha: sha, name: 'Cloudflare Pages', app: { slug: 'cloudflare-workers-and-pages' }, details_url: 'https://dash.cloudflare.com/?to=/account/pages/view/bathos-web/deployment', status: 'completed', conclusion: 'success' };
+const run = { id: 1, pull_requests: [], output: { summary: '' }, head_sha: sha, name: 'Cloudflare Pages', app: { slug: 'cloudflare-workers-and-pages' }, details_url: 'https://dash.cloudflare.com/?to=/account/pages/view/bathos-web/deployment', status: 'completed', conclusion: 'success' };
 test('requires exact SHA, app, check name and Pages project', () => {
-  for (const override of [{ head_sha: 'b'.repeat(40) }, { app: { slug: 'vercel' } }, { name: 'reader' }, { details_url: 'https://dash.cloudflare.com/?to=/account/pages/view/other/deployment' }]) {
+  for (const override of [{ head_sha: 'b'.repeat(40) }, { app: { slug: 'vercel' } }, { name: 'reader' }, { pull_requests: [{ head: { ref: 'feature' } }] }, { output: { summary: 'Branch Preview URL:' } }, { details_url: 'https://dash.cloudflare.com/?to=/account/pages/view/other/deployment' }]) {
     assert.equal(deploymentState(sha, [{ ...run, ...override }]).state, 'unknown');
   }
   assert.equal(deploymentState(sha, [run]).state, 'success');

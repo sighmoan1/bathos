@@ -6,9 +6,9 @@ A successful save means the Markdown change is committed to the repository's `ma
 
 ## Checking deployment
 
-The publishing panel distinguishes **saved to Git** from deployment status. Tap **Check deployment** after signing in. It shows the checked `main` commit's short SHA, and a build details link when Cloudflare supplies one. This is a snapshot of the branch and may include another author's changes; it does not identify the exact commit of your own save. To confirm your save specifically, open **Git history and recovery**, select its commit, and inspect the changed files and Cloudflare check.
+The publishing panel distinguishes **saved to Git** from deployment status. Tap **Check deployment** after signing in. It shows the checked `main` commit's short SHA, and a build details link when Cloudflare supplies one. This is a snapshot of the branch and may include another author's changes; it does not identify the exact commit of your own save. To confirm your save specifically, open **Git history**, select its commit, and inspect the changed files and Cloudflare check.
 
-The panel accepts only the `Cloudflare Pages` check from the `cloudflare-workers-and-pages` GitHub App for the `bathos-web` project and exact checked SHA. It ignores Vercel, unrelated tests, other Pages projects, and checks on a different commit. The newest retry of the matching check determines the result:
+The panel accepts only the `Cloudflare Pages` check from the `cloudflare-workers-and-pages` GitHub App for the `bathos-web` project and exact checked SHA. It ignores Vercel, unrelated tests, other Pages projects, checks on a different commit, and Cloudflare checks linked to a pull request or containing a branch preview URL. The newest retry of the matching check determines the result:
 
 - **Queued/building**: wait for deployment. The panel retries once per minute, up to five times while visible.
 - **Deployment check passed**: Cloudflare reported a successful deployment. Open the public site to verify the post; a successful check alone does not prove the domain points to that project or that your phone's cached page has refreshed.
@@ -23,7 +23,7 @@ Checks are limited to once per minute. Requests use Decap's existing signed-in G
 
 ## Recovering a deleted or overwritten post on a phone
 
-1. Open **Git history and recovery** in the publishing panel. Sign in to GitHub if needed; the repository is private.
+1. Open **Git history** in the publishing panel. Sign in to GitHub if needed; the repository is private.
 2. Find the deletion/edit commit and open its changed files. To recover one post, open that Markdown file's version **before** the commit (use the parent commit/browse-files view), choose **Raw**, and copy the complete text, including the front matter between `---` lines.
 3. In the repository, open `content`, use **Add file → Create new file**, and enter the original filename for a deletion. For an overwritten post, open its current file and choose **Edit**. Paste the recovered text. Commit to `main` if your permissions allow it, or create a branch and pull request to merge it. A PR must merge before the production site changes.
 4. Check the restoration commit's Cloudflare deployment and open the public site.

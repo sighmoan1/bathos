@@ -15,6 +15,18 @@ This repository is private, so the OAuth app requests GitHub's `repo` scope. Git
 
 The flow uses PKCE with an S256 challenge and an HttpOnly verifier cookie. The callback checks a random ten-minute state bound to a Secure, HttpOnly, SameSite=Lax host cookie. It clears the cookie, confirms GitHub repository push permissions, and uses Decap's `authorizing:github` handshake followed by `authorization:github:success:{...}`. Messages require the exact configured CMS origin and opener window, never `*`. Callback pages use no-store, no-referrer and a nonce Content Security Policy. Errors do not expose upstream responses, codes or secrets. Invocation logs and traces are disabled because they can capture OAuth callback query strings; only sanitized application error events are logged. A denied OAuth request delivers an error to the editor.
 
+## Activation of the existing OAuth app
+
+The owner has created [Bathos post editor](https://github.com/settings/applications/3927167)
+and deployed the `bathos-admin-oauth` Worker. If authentication reports configuration
+unavailable, the remaining required secret is `GITHUB_CLIENT_SECRET`. On that GitHub
+app's settings page, generate a new client secret. From `workers/admin-oauth`, run
+`npm ci` and then `npx wrangler secret put GITHUB_CLIENT_SECRET`; paste it only into
+the interactive terminal prompt. Never paste it into chat, commit it, or put it in
+frontend settings. Confirm the Worker has the correct client ID, route and origins,
+then perform the authorized and unauthorized login checks above. An owner must
+complete this secret setup before mobile sign-in is usable.
+
 ## Alternative authentication origin
 
 The same-origin route is the default. If using a separate HTTPS Worker domain, change `backend.base_url` in `public/admin/config.yml`, `OAUTH_ORIGIN` in the Worker config, the Worker route, and the GitHub callback URL together. Keep `CMS_ORIGIN` equal to the exact editor origin (no trailing slash). The callback must have the same origin as `backend.base_url` because Decap checks it. Preview domains and localhost cannot authenticate against production by design; configure a separate OAuth app and Worker for a separate trusted editor origin.
