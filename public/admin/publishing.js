@@ -43,7 +43,8 @@
     '<a href="https://bathos.org/" target="_blank" rel="noopener noreferrer">Open public site</a> · ' +
     '<a href="https://github.com/' + REPO + '/commits/main/" target="_blank" rel="noopener noreferrer">Git history and recovery</a></div>';
   const shell = document.getElementById('admin-shell');
-  (shell || document.body).appendChild(panel);
+  if (shell) shell.insertAdjacentElement('afterend', panel);
+  else document.body.prepend(panel);
   const saved = document.getElementById('git-save-status');
   const status = document.getElementById('deployment-status');
   const button = document.getElementById('deployment-refresh');
@@ -52,6 +53,7 @@
   let inFlight = false;
   let retries = 0;
   let timer;
+  let generation = 0;
 
   // CMS.getBackend returns a factory, not the signed-in instance. Capture the
   // instance Decap creates, leaving its implementation/authentication untouched.
@@ -65,9 +67,7 @@
       if (typeof deleteFiles === 'function') {
         backend.deleteFiles = function (...deleteArgs) {
           return Promise.resolve(deleteFiles.apply(this, deleteArgs)).then(result => {
-            saved.textContent = 'Deletion saved to Git. It takes effect on the public site after deployment. Recover a deleted post from Git history.';
-            retries = 0;
-            check();
+            changesSaved('Deletion saved to Git. It takes effect on the public site after deployment. Recover a deleted post from Git history.');
             return result;
           });
         };
@@ -108,6 +108,7 @@
       return;
     }
     if (Date.now() - lastCheck < INTERVAL) return;
+    const requestGeneration = generation;
     lastCheck = Date.now();
     inFlight = true;
     button.disabled = true;
@@ -118,6 +119,7 @@
       // A newer commit arriving during this request does not replace this SHA.
       // This is a branch snapshot, never a claim that HEAD is the author's save.
       if (!backend?.token) throw new Error('signed-out');
+      if (requestGeneration !== generation) return;
       const result = deploymentState(commit.sha, data.check_runs || []);
       render(result, commit.sha);
       clearTimeout(timer);
@@ -125,6 +127,7 @@
         timer = setTimeout(() => { if (!document.hidden) check(); }, INTERVAL);
       }
     } catch (error) {
+      if (requestGeneration !== generation) return;
       clearTimeout(timer);
       panel.dataset.state = 'unknown';
       status.textContent = error.message === 'rate-limit'
@@ -137,19 +140,24 @@
     }
   }
   button.addEventListener('click', () => { retries = 0; check(); });
-  root.CMS.registerEventListener({ name: 'postSave', handler: () => {
-    saved.textContent = 'Changes saved to Git. Deployment is a separate step. Check the latest main commit below; it may include changes by other authors.';
+  function changesSaved(message) {
+    generation++;
+    saved.textContent = message;
+    panel.dataset.state = 'pending';
+    status.textContent = 'Git changed. Deployment has not yet been checked for these changes.';
     retries = 0;
-    check();
+    clearTimeout(timer);
+    const delay = Math.max(0, INTERVAL - (Date.now() - lastCheck));
+    if (delay || inFlight) timer = setTimeout(check, Math.max(delay, 100));
+    else check();
+  }
+  root.CMS.registerEventListener({ name: 'postSave', handler: () => {
+    changesSaved('Changes saved to Git. Deployment is a separate step. The checked main commit may include changes by other authors.');
   } });
   root.CMS.registerEventListener({ name: 'postPublish', handler: () => {
-    saved.textContent = 'Changes committed to Git. Check the deployment before expecting them on the public site.';
-    retries = 0;
-    check();
+    changesSaved('Changes committed to Git. Check the deployment before expecting them on the public site.');
   } });
   root.CMS.registerEventListener({ name: 'postUnpublish', handler: () => {
-    saved.textContent = 'Removal committed to Git. It takes effect on the public site after deployment. You can recover content from Git history.';
-    retries = 0;
-    check();
+    changesSaved('Removal committed to Git. It takes effect on the public site after deployment. Recover content from Git history.');
   } });
 })(typeof window !== 'undefined' ? window : globalThis);
