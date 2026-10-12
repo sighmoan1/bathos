@@ -8,6 +8,7 @@
   "vars": {
     "CMS_ORIGIN": "https://bathos.org",
     "OAUTH_ORIGIN": "https://bathos.org",
+    "GITHUB_CLIENT_ID": "Ov23liqFi0WmdhBxvYVx",
     "GITHUB_REPOSITORY": "sighmoan1/bathos"
   },
   "observability": { "enabled": true, "logs": { "enabled": true, "invocation_logs": false }, "traces": { "enabled": false } }

@@ -1,5 +1,7 @@
 # Author posts on a phone
 
+This describes the earlier Decap editor. Use the [current installable post manager](post-manager.md) at `/manage/` instead.
+
 Open `/admin/`, sign in with GitHub, select **Posts**, then **New Posts** or an existing post. Fill in the fields and write in **Rich Text** or **Markdown** mode. Tap **Preview** to see the rendered post; tap **Edit post** to return to the form. For a new post, tap **Publish**, then **Publish now**. For an edited post, use the publish control to save the update. **Delete entry** appears for saved posts.
 
 The phone editor keeps its actions above the scrolling form. Returning to the collection shows the admin shell and publishing information. Changes still use Decap's standard GitHub backend and await the site deployment.

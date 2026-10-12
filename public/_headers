@@ -1,0 +1,6 @@
+/manage/sw.js
+  Cache-Control: no-cache, no-store, must-revalidate
+/manage/
+  Cache-Control: no-cache, must-revalidate
+/admin/*
+  Cache-Control: no-cache, must-revalidate
