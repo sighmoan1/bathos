@@ -16,6 +16,16 @@ Review the selectors and the following checks before upgrading Decap. Sources ch
 
 Completed on 12 October 2026 in headless Chromium with the exact pinned bundle and Decap's in-memory `test-repo` backend. This kept verification writes out of GitHub and production content. T3 preview opened, but resizing repeatedly timed out and its automation host disconnected, so standalone temporary Playwright was used for these checks.
 
+To rerun without adding a production dependency:
+
+```sh
+npm install --prefix /tmp/bathos-mobile-browser playwright --no-audit --no-fund
+/tmp/bathos-mobile-browser/node_modules/.bin/playwright install chromium
+NODE_PATH=/tmp/bathos-mobile-browser/node_modules node scripts/check-admin-mobile.cjs
+```
+
+The check serves the repository's admin shell and assets on a temporary loopback port, replacing the GitHub backend with `test-repo`. It downloads the pinned CMS bundle, makes no GitHub writes and checks publishing-panel visibility after returning to the list when that feature is installed.
+
 At **375 × 812** and **390 × 812** CSS pixels:
 
 - Logged in to the test backend and opened the empty collection; document scroll width equaled viewport width.
