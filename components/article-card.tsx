@@ -110,7 +110,7 @@ export const ArticleCard = forwardRef<HTMLDivElement, ArticleCardProps>(function
   return (
     <motion.div
       ref={ref}
-      className="w-full"
+      className="reader-card w-full"
       style={{
         x: isTop ? x : 0,
         y: isTop ? y : 0,
@@ -129,7 +129,7 @@ export const ArticleCard = forwardRef<HTMLDivElement, ArticleCardProps>(function
       exit={exitDirection ? exitAnimations[exitDirection] : { opacity: 0, scale: 0.9 }}
       transition={{ duration: 0.25 }}
     >
-      <div className="relative w-full bg-card rounded-2xl border border-border overflow-hidden shadow-xl">
+      <div className="reader-card-surface relative w-full bg-card rounded-2xl border border-border overflow-hidden shadow-xl">
         {/* Swipe indicators */}
         {isTop && (
           <>
@@ -181,7 +181,7 @@ export const ArticleCard = forwardRef<HTMLDivElement, ArticleCardProps>(function
         )}
 
         {/* Card content - More compact layout */}
-        <div className="flex flex-col p-5 short:p-3.5">
+        <div className="reader-card-content flex flex-col p-5 short:p-3.5">
           {/* Tags */}
           {article.tags && article.tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mb-3 short:mb-2">
@@ -204,10 +204,10 @@ export const ArticleCard = forwardRef<HTMLDivElement, ArticleCardProps>(function
           )}
 
           {/* Title */}
-          <h2 className="text-xl font-bold text-foreground mb-2 leading-tight text-balance">{article.title}</h2>
+          <h2 className="reader-title font-bold text-foreground mb-2 leading-tight text-balance">{article.title}</h2>
 
           {/* Description */}
-          <p className="text-muted-foreground text-sm leading-relaxed line-clamp-3 short:line-clamp-2 mb-3 short:mb-2">
+          <p className="reader-description text-muted-foreground leading-relaxed line-clamp-3 short:line-clamp-2 mb-3 short:mb-2">
             {article.description}
           </p>
 
@@ -224,7 +224,7 @@ export const ArticleCard = forwardRef<HTMLDivElement, ArticleCardProps>(function
 
           {/* Actions. The bin and bookmark buttons are the click-driven
               equivalent of swiping the card left and right. */}
-          <div className="flex items-center gap-2">
+          <div className="reader-card-actions flex items-center gap-2">
             <button
               onClick={guardedClick(onSwipeLeft)}
               aria-label="Bin this article"

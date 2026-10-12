@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
 const templatePath = path.resolve(__dirname, '../public/manage/sw.js');
-function harness(fetchImpl = async request => new Response('network ' + request.url)) {
+function harness(fetchImpl = async request => new Response('network ' + request.url), reader = false) {
   const handlers = new Map(), stores = new Map();
   const cache = key => {
     if (!stores.has(key)) stores.set(key, new Map());
@@ -17,7 +17,7 @@ function harness(fetchImpl = async request => new Response('network ' + request.
   };
   const self = { location: { origin: 'https://bathos.org' }, addEventListener: (event, callback) => handlers.set(event, callback), skipWaiting: async () => {}, clients: { claim: async () => {} } };
   const caches = { open: async key => cache(key), keys: async () => [...stores.keys()], delete: async key => stores.delete(key), match: async req => { for (const key of stores.keys()) { const result = await cache(key).match(req); if (result) return result; } } };
-  const source = fs.readFileSync(templatePath, 'utf8').replace(/const CACHE_NAME = [^;]+;/, 'const CACHE_NAME = "bathos-manager-test";').replace(/const PRECACHE = [^;]+;/, 'const PRECACHE = ' + JSON.stringify(['/manage/', '/_next/static/chunks/editor.js']) + ';');
+  const source = fs.readFileSync(reader ? path.resolve(__dirname, '../public/sw.js') : templatePath, 'utf8').replace(/const CACHE_NAME = [^;]+;/, 'const CACHE_NAME = ' + JSON.stringify(reader ? 'bathos-reader-test' : 'bathos-manager-test') + ';').replace(/const PRECACHE = [^;]+;/, 'const PRECACHE = ' + JSON.stringify([reader ? '/' : '/manage/', '/_next/static/chunks/editor.js']) + ';');
   vm.runInNewContext(source, { self, caches, fetch: fetchImpl, URL, Request, Response, console });
   return { handlers, stores, caches,
     async event(name, fields = {}) { const pending = []; let response; const event = { ...fields, waitUntil: promise => pending.push(promise), respondWith: promise => { response = promise; } }; handlers.get(name)?.(event); await Promise.all(pending); return response && await response; },
@@ -48,4 +48,26 @@ test('activation removes older manager cache while preserving unrelated reader c
   await worker.event('install');
   await worker.event('activate');
   assert.deepEqual(await worker.caches.keys(), ['reader-cache', 'bathos-manager-test']);
+});
+
+
+test('reader caches only its shell and build assets and excludes authoring requests', async () => {
+  const worker = harness(async () => { throw new TypeError('offline'); }, true);
+  await worker.event('install');
+  for (const url of ['https://bathos.org/api/session', 'https://bathos.org/manage/', 'https://bathos.org/admin/', 'https://example.com/', 'https://bathos.org/_next/static/chunks/unlisted.js']) {
+    assert.equal(await worker.event('fetch', { request: new Request(url) }), undefined);
+  }
+  assert.equal(await worker.event('fetch', { request: new Request('https://bathos.org/', { method: 'POST' }) }), undefined);
+  const navigation = { url: 'https://bathos.org/', method: 'GET', mode: 'navigate' };
+  assert.match(await (await worker.event('fetch', { request: navigation })).text(), /cached/);
+  assert.match(await (await worker.event('fetch', { request: new Request('https://bathos.org/_next/static/chunks/editor.js') })).text(), /cached/);
+});
+
+test('reader cache activation preserves manager drafts and unrelated caches', async () => {
+  const worker = harness(undefined, true);
+  await worker.caches.open('bathos-manager-current');
+  await worker.caches.open('bathos-reader-old');
+  await worker.event('install');
+  await worker.event('activate');
+  assert.deepEqual(await worker.caches.keys(), ['bathos-manager-current', 'bathos-reader-test']);
 });

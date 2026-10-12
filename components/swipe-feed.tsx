@@ -16,8 +16,8 @@ import type { Article, TagCount } from "@/lib/articles"
 import { ArticleCard } from "./article-card"
 import { ArticleReader } from "./article-reader"
 import { ArticleListPanel } from "./article-list-panel"
-import { CardPeek } from "./card-peek"
 import { TagFilter } from "./tag-filter"
+import { ReaderPwa } from "./reader-pwa"
 import { useFeedKeyboard, useFeedWheel } from "@/lib/use-feed-controls"
 
 interface SwipeFeedProps {
@@ -229,13 +229,14 @@ export function SwipeFeed({ initialArticles, allTags }: SwipeFeedProps) {
   }
 
   return (
-    <div className="min-h-dvh bg-background">
+    <div className="reader-shell bg-background">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-20 bg-background/80 backdrop-blur-lg border-b border-border pt-[env(safe-area-inset-top)]">
-        <div className="max-w-md mx-auto px-4 py-3">
+      <header className="relative z-20 bg-background/80 backdrop-blur-lg border-b border-border pt-[env(safe-area-inset-top)]">
+        <div className="w-full px-4 md:px-8 py-3">
           <div className="flex items-center justify-between">
-            <h1 className="text-lg font-bold text-foreground">Swipe Reader</h1>
+            <h1 className="text-lg font-bold text-foreground">Bathos</h1>
             <div className="flex items-center gap-1">
+              <ReaderPwa />
               {hasArticles && (
                 <span className="text-xs text-muted-foreground mr-1">
                   {currentIndex + 1} / {articles.length}
@@ -300,25 +301,13 @@ export function SwipeFeed({ initialArticles, allTags }: SwipeFeedProps) {
 
       <main
         ref={feedRef}
-        className={`${
-          showFilters
-            ? "pt-[calc(7rem+env(safe-area-inset-top))]"
-            : "pt-[calc(4rem+env(safe-area-inset-top))]"
-        } pb-[calc(8rem+env(safe-area-inset-bottom))] short:pb-[calc(4.5rem+env(safe-area-inset-bottom))] px-4 min-h-dvh flex flex-col items-center justify-center short:justify-start transition-[padding] duration-200`}
+        className="reader-feed"
       >
-        {/* The gutter reserves room for the peek cards; tighter on short
-            phones, where every pixel of card is worth more than the preview. */}
-        <div className="w-full max-w-md relative py-10 sm:py-14 short:py-0">
+        {/* The deck takes the remaining viewport after the bars. */}
+        <div className="reader-deck">
           {hasArticles ? (
             <>
-              {/* Peek at the previous article */}
-              {hasPrevious && (
-                <div className="absolute inset-x-6 top-0 z-0 short:hidden">
-                  <CardPeek article={articles[currentIndex - 1]} direction="up" onClick={handleSwipeDown} />
-                </div>
-              )}
-
-              <div className="relative z-10">
+              <div className="reader-current relative z-10">
                 {/* popLayout, not "wait": the outgoing card is pulled out of
                     flow so the next one appears immediately, which keeps rapid
                     keyboard/wheel navigation snappy. */}
@@ -339,13 +328,6 @@ export function SwipeFeed({ initialArticles, allTags }: SwipeFeedProps) {
                   />
                 </AnimatePresence>
               </div>
-
-              {/* Peek at the next article */}
-              {hasNext && (
-                <div className="absolute inset-x-6 bottom-0 z-0 short:hidden">
-                  <CardPeek article={articles[currentIndex + 1]} direction="down" onClick={handleSwipeUp} />
-                </div>
-              )}
             </>
           ) : (
             <div className="flex flex-col items-center justify-center text-center px-4 py-12">
@@ -401,8 +383,8 @@ export function SwipeFeed({ initialArticles, allTags }: SwipeFeedProps) {
         </div>
 
         {hasArticles && (
-          <div className="fixed bottom-0 left-0 right-0 bg-background/80 backdrop-blur-lg border-t border-border py-3 short:py-1.5 pb-[calc(0.75rem+env(safe-area-inset-bottom))] short:pb-[calc(0.375rem+env(safe-area-inset-bottom))]">
-            <div className="max-w-md mx-auto px-4">
+          <div className="reader-controls border-t border-border py-3 short:py-1.5 pb-[calc(0.75rem+env(safe-area-inset-bottom))] short:pb-[calc(0.375rem+env(safe-area-inset-bottom))]">
+            <div className="w-full px-4 md:px-8">
               <div className="grid grid-cols-4 gap-2 text-xs text-muted-foreground">
                 <ControlButton
                   onClick={handleSwipeLeft}
