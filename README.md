@@ -1,22 +1,35 @@
 # TikTok blog feed
 
+## Manage posts from your phone
+
+Open [bathos.org/admin/](https://bathos.org/admin/) and sign in with GitHub using
+an account with repository write access. Choose **Posts** to create a post,
+open one to edit, or choose **Delete** and confirm to remove it. Save commits
+the Markdown to Git; publication waits for a successful Cloudflare deployment.
+Use **Check deployment** and **Open public site** to verify the update.
+
+See [admin authentication setup](docs/admin-auth.md) and
+[publishing, deployment status, and recovery](docs/admin-publishing.md).
+The reader's trash only hides posts in that browser.
+
 ## Cloudflare Pages
 
 This app exports a static site. Recipes are read from `content/*.md` at build
 time; reading, swiping, filtering, saved articles, and trash run in the browser.
 Saved articles and preferences are specific to the browser and domain.
 
-Connect `sighmoan1/bathos` to Cloudflare Pages with these build settings:
+The Git-connected project is `bathos-web` for `sighmoan1/bathos`. Use these build settings:
 
 - Framework preset: **Next.js (Static HTML Export)**
 - Build command: `pnpm build`
 - Build output directory: `out`
-- Production branch: the repository's default branch
+- Production branch: `main`
 
-After deployment, add `bathos.org` under the Pages project's **Custom domains**.
+Assign `bathos.org` under `bathos-web`'s **Custom domains**. The separate
+direct-upload project `bathos` does not publish CMS commits automatically.
 Cloudflare manages the DNS record and HTTPS certificate for the domain when
 its zone is in the same account. Recipe changes require a new build; connected
-Git pushes trigger this automatically. No Workers or server functions are needed.
+Git pushes trigger this automatically. The public reader is static; author sign-in uses the separate OAuth Worker.
 Vercel Analytics is enabled only on Vercel deployments.
 
 *Automatically synced with your [v0.app](https://v0.app) deployments*
