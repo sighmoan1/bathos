@@ -6,7 +6,7 @@ The static site exports `/admin/`. Decap CMS 3.9.0 is pinned with Subresource In
 
 Authentication is not usable until an owner configures an OAuth app and the Worker secrets. No credentials are included in this repository.
 
-1. In GitHub Settings → Developer settings → OAuth Apps, create a new OAuth app. Set homepage `https://bathos.org/admin/` and authorization callback `https://bathos.org/api/callback`.
+1. In GitHub Settings → Developer settings → OAuth Apps, create a new OAuth app. Set homepage `https://bathos.org/admin/` and authorization callback `https://bathos.org/api/callback`. Disable **Expire user access tokens**: this Decap integration does not refresh expiring GitHub tokens. Revoke the OAuth authorization in GitHub when you need to invalidate a session.
 2. From `workers/admin-oauth`, run `npm ci`, then set secrets with `npx wrangler secret put GITHUB_CLIENT_ID` and `npx wrangler secret put GITHUB_CLIENT_SECRET`. Enter values interactively; never commit them or paste them into frontend config.
 3. Run `npm test` and `npx wrangler deploy`. The route `bathos.org/api/*` must be attached to the Cloudflare zone hosting the proxied site. The site itself remains a static Pages export; this Worker handles only `/api/auth` and `/api/callback`.
 4. Verify Pages deploys `main` automatically, open `https://bathos.org/admin/`, allow the sign-in popup, and authenticate as an account with write access. Test a new temporary post, update it, delete it, and confirm the public deployment reflects each commit. Also test a GitHub account without repository write access; authentication must be refused.

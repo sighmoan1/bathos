@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import vm from 'node:vm';
 import { handleRequest } from './index.mjs';
 const env = { CMS_ORIGIN: 'https://bathos.org', OAUTH_ORIGIN: 'https://bathos.org', GITHUB_REPOSITORY: 'sighmoan1/bathos', GITHUB_CLIENT_ID: 'test-client', GITHUB_CLIENT_SECRET: 'test-secret' };
 async function start() {
@@ -59,4 +60,33 @@ test('upstream failure is generic without secrets',async()=>{
  const flow=await start();
  const response=await handleRequest(callback(flow),env,async()=>Response.json({error:'bad',secret:env.GITHUB_CLIENT_SECRET},{status:502}));
  const html=await response.text();assert.match(html,/authorization:github:error/);assert.doesNotMatch(html,/test-secret/);
+});
+
+test('callback script executes Decap handshake and rejects hostile messages', async () => {
+ const flow = await start(); let calls = 0;
+ const token = 'token</script><script>evil()</script>';
+ const response = await handleRequest(callback(flow), env, async () => Response.json(++calls === 1 ? { access_token: token } : { permissions: { push: true } }));
+ const html = await response.text();
+ const script = html.match(/<script nonce="[^"]+">([\s\S]*?)<\/script>/)[1];
+ const messages = [], listeners = new Map(), status = { textContent: '' };
+ const opener = { postMessage(message, origin) { messages.push({ message, origin }); } };
+ const window = {
+  opener,
+  addEventListener(name, callback) { listeners.set(name, callback); },
+  removeEventListener(name) { listeners.delete(name); },
+ };
+ vm.runInNewContext(script, { window, document: { getElementById() { return status; } }, setTimeout() {} });
+ assert.deepEqual(messages, [{ message: 'authorizing:github', origin: 'https://bathos.org' }]);
+ const reply = listeners.get('message');
+ reply({ origin: 'https://evil.test', source: opener, data: 'authorizing:github' });
+ reply({ origin: 'https://bathos.org', source: {}, data: 'authorizing:github' });
+ reply({ origin: 'https://bathos.org', source: opener, data: 'unrelated' });
+ assert.equal(messages.length, 1);assert.ok(listeners.has('message'));
+ reply({ origin: 'https://bathos.org', source: opener, data: 'authorizing:github' });
+ assert.equal(messages.length, 2);assert.equal(messages[1].origin, 'https://bathos.org');
+ const prefix = 'authorization:github:success:';
+ assert.ok(messages[1].message.startsWith(prefix));
+ assert.deepEqual(JSON.parse(messages[1].message.slice(prefix.length)), { token, provider: 'github' });
+ assert.equal(listeners.has('message'), false);
+ assert.equal(status.textContent, 'Return to the editor to continue.');
 });
