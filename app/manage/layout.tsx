@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 }
 export const viewport: Viewport = {
-  width: "device-width", initialScale: 1, viewportFit: "cover", themeColor: "#f7f3eb",
+  width: "device-width", initialScale: 1, viewportFit: "cover", themeColor: "#f4f3f5",
 }
 export default function ManagerLayout({ children }: { children: React.ReactNode }) {
   return <>{children}<noscript>Enable JavaScript to use the post manager.</noscript></>
