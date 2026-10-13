@@ -1,6 +1,6 @@
 /* Build first. Uses compiled site + mocked author API; never writes GitHub.
- * NODE_PATH=/path/to/playwright/node_modules node scripts/check-post-manager.cjs */
-const { chromium } = require('playwright');
+ * node scripts/check-post-manager.cjs */
+const { chromium } = require('@playwright/test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const http = require('node:http');
