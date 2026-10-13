@@ -87,3 +87,12 @@ Validation: `pnpm build`, `pnpm test:e2e`, `node --test tests/*.test.cjs`,
 `npm test --prefix workers/admin-oauth`, and the mobile manager browser check.
 A real device installation check is still needed to verify native home-screen
 and standalone behavior.
+
+## Share a post
+
+Each post has a permanent `/posts/<slug>/` URL based on its Markdown filename.
+Open a title or Read Article to read it, then use Share on the card or article
+to open the device share sheet or copy its link. If clipboard access is blocked,
+a selectable link is shown. Direct links open even when the post is hidden or
+excluded by local filters. Keep filenames unchanged to preserve existing links.
+Post pages and their assets are included in the reader’s offline cache.

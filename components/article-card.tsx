@@ -5,6 +5,9 @@ import { X, Bookmark, ArrowRight, ChevronUp, ChevronDown, Trash2 } from "lucide-
 import type { Article } from "@/lib/articles"
 import { forwardRef, useRef, useState, type MouseEvent as MouseEvent_ } from "react"
 
+import { postPath } from "@/lib/post-links"
+import { ShareButton } from "./share-button"
+
 interface ArticleCardProps {
   article: Article
   onSwipeLeft: () => void
@@ -206,7 +209,13 @@ export const ArticleCard = forwardRef<HTMLDivElement, ArticleCardProps>(function
           )}
 
           {/* Title */}
-          <h2 className="reader-title font-bold text-foreground mb-2 leading-tight text-balance">{article.title}</h2>
+          <h2 className="reader-title font-bold text-foreground mb-2 leading-tight text-balance">
+            <a href={postPath(article.slug)} onClick={(event) => {
+              if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+              event.preventDefault()
+              guardedClick(onReadMore)(event)
+            }} onPointerDown={(event) => event.stopPropagation()}>{article.title}</a>
+          </h2>
 
           {/* Description */}
           <p className="reader-description text-muted-foreground leading-relaxed line-clamp-3 short:line-clamp-2 mb-3 short:mb-2">
@@ -229,6 +238,7 @@ export const ArticleCard = forwardRef<HTMLDivElement, ArticleCardProps>(function
           {/* Actions. The bin and bookmark buttons are the click-driven
               equivalent of swiping the card left and right. */}
           <div className="reader-card-actions flex items-center gap-2">
+            <ShareButton article={article} allowClick={() => !didDragRef.current} />
             <button
               onClick={guardedClick(onSwipeLeft)}
               aria-label="Bin this article"
