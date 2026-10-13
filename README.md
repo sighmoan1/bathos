@@ -76,12 +76,11 @@ Install Bathos button for a browser install prompt or platform instructions.
 On iPhone/iPad, use Safari → Share → Add to Home Screen. On supported Android
 and desktop browsers, choose Install app from the browser menu.
 
-Visit online once before reading offline. The installed app opens the reader
-in a standalone window, and the exported articles and reader assets are cached
-together. Saved articles, hidden articles and filters remain on this device.
-New reader releases and their articles download in the background and apply when you switch away from the app. Reopening the app also lets a waiting release take over.
-The reader cache excludes sign-in, post management and API responses; the
-manager keeps its own offline shell and device drafts.
+The installed app opens the online reader in a standalone window. Reading requires
+an internet connection. Saved articles, hidden articles and filters remain on
+this device. The reader does not register a service worker or cache releases.
+The legacy `/sw.js` endpoint removes old reader caches and registrations.
+The post manager keeps its separate offline shell and device drafts.
 
 Validation: `pnpm build`, `pnpm test:e2e`, `node --test tests/*.test.cjs`,
 `npm test --prefix workers/admin-oauth`, and the mobile manager browser check.
@@ -95,4 +94,4 @@ Open a title or Read Article to read it, then use Share on the card or article
 to open the device share sheet or copy its link. If clipboard access is blocked,
 a selectable link is shown. Direct links open even when the post is hidden or
 excluded by local filters. Keep filenames unchanged to preserve existing links.
-Post pages and their assets are included in the reader’s offline cache.
+Post pages load directly from the online site.

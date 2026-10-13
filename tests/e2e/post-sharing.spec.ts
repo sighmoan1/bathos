@@ -81,17 +81,3 @@ test('native share receives title and permalink and cancellation stays quiet', a
   await expect(page.getByRole('status').last()).toBeEmpty()
   await expect(page.locator('article h1')).toBeVisible()
 })
-
-test('post permalinks are available offline after installing the reader cache', async ({ page, context }) => {
-  await page.goto('/')
-  await page.evaluate(() => navigator.serviceWorker.ready)
-  await page.waitForFunction(() => navigator.serviceWorker.controller !== null)
-  await context.setOffline(true)
-  for (const slug of slugs) {
-    await page.goto(`/posts/${encodeURIComponent(slug)}/`)
-    await expect(page.locator('article h1')).toBeVisible()
-    await page.reload()
-    await expect(page.locator('article h1')).toBeVisible()
-  }
-  await context.setOffline(false)
-})

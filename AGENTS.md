@@ -9,4 +9,4 @@ The owner wants completed project changes deployed automatically. Unless the use
 - Production is https://bathos.org. The Git-connected Cloudflare Pages project is `bathos-web`; it builds `pnpm build` from `main` and publishes `out`.
 - Wait for the deployment of the exact merged commit and verify the affected behavior on production before saying the change is live.
 - If publishing fails or credentials are unavailable, explain the specific blocker and distinguish local changes, merged changes, and deployed changes.
-- The reader caches content for offline use. Check a fresh online page when verifying deployment, and account for stale service-worker caches when diagnosing old UI.
+- The reader requires an online connection and does not register a service worker. The legacy /sw.js endpoint retires old reader caches and registrations. Check a fresh online page when verifying deployment, and account for legacy service-worker caches when diagnosing old UI.
