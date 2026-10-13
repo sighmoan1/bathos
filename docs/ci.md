@@ -58,6 +58,16 @@ available. Failed checks leave the publication unmerged and display a progress
 link; after fixing or rerunning checks, reload the manager to resume tracking.
 Do not introduce a protection bypass to restore direct publishing.
 
+Each save has a device-persisted operation UUID and immutable request snapshot.
+Retries and reloads reconcile the same deterministic branch and PR after a
+lost response; they never intentionally choose a new branch for that request.
+The content commit carries signed operation metadata. The manager receives a
+signed receipt binding repository, writer, operation, PR, branch, target file
+and expected blob. Before retry/status mutations, the Worker verifies that
+receipt and exactly one matching content-file change. Receipt MAC keys are
+HKDF-derived with a separate purpose from the existing session encryption key;
+no session-key rotation or OAuth grant change is required.
+
 These repository controls do not prevent direct deployments by someone who
 already has Cloudflare deployment credentials. Audit those permissions
 separately.

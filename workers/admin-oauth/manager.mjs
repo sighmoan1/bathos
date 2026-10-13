@@ -1,5 +1,5 @@
 import { parse, stringify } from 'yaml';
-import { submitPublication, publicationStatus } from './publication.mjs';
+import { submitPublication, publicationStatus, validOperation, PublicationFailure } from './publication.mjs';
 export const SESSION_COOKIE = '__Host-bathos-session';
 const AGE = 7 * 86400, LIMIT = 128 * 1024;
 const encoder = new TextEncoder(), decoder = new TextDecoder('utf-8', { fatal: true });
@@ -137,28 +137,31 @@ export async function manageRequest(request, env, upstream) {
     const deployment = url.pathname.match(/^\/api\/deployment\/([a-f0-9]{40})$/);
     if (deployment && request.method === 'GET') return json(deploymentState(deployment[1], (await github(`/commits/${deployment[1]}/check-runs?per_page=100`)).check_runs || []));
     const publication = url.pathname.match(/^\/api\/publication\/([1-9][0-9]{0,8})$/);
-    if (publication && ['GET','POST'].includes(request.method)) return json(await publicationStatus(env.GITHUB_REPOSITORY, saved.login, Number(publication[1]), request.method === 'POST', github, graphql, deploymentState));
+    if (publication && ['GET','POST'].includes(request.method)) return json(await publicationStatus(env, saved.login, Number(publication[1]), request.headers.get('X-Bathos-Publication'), request.method === 'POST', github, graphql, deploymentState));
     const match = url.pathname.match(/^\/api\/posts\/([^/]+)$/);
     const slug = match?.[1];
     if (match && !validExistingSlug(slug)) fail(400, 'invalid_slug', 'Invalid post filename.');
     if (match && request.method === 'GET') return json(await readPost(slug));
     if ((url.pathname === '/api/posts' && request.method === 'POST') || (match && ['PUT','DELETE'].includes(request.method))) {
-      const data = await requestBody(request);
+      const input = await requestBody(request);
+      const { operationId, ...data } = input || {};
+      if (!validOperation(operationId)) fail(400, 'invalid_operation', 'Reload the post manager before saving. Your draft is kept.');
       if (request.method !== 'POST' && (!data || !validSha(data.sha))) fail(400, 'missing_sha', 'Reload the post before updating or deleting it.');
       const target = request.method === 'POST' ? data?.slug : slug;
       if (!(request.method === 'POST' ? validSlug(target) : validExistingSlug(target))) fail(400, 'invalid_slug', 'Use lowercase letters, numbers and hyphens for the filename.');
       if (request.method === 'DELETE') {
         if (Object.keys(data).some(k => k !== 'sha')) fail(400, 'invalid_post', 'Unexpected deletion fields.');
-        const { result, publication } = await submitPublication(env.GITHUB_REPOSITORY, target, 'DELETE', { message: `Delete post: ${target}`, sha: data.sha }, github, graphql);
+        const { result, publication } = await submitPublication(env, saved.login, operationId, target, 'DELETE', { message: `Delete post: ${target}`, sha: data.sha }, github, graphql);
         return json({ commitSha: result.commit.sha, publication });
       }
       if (request.method === 'POST' && data.sha !== undefined) fail(400, 'invalid_post', 'New posts cannot include a revision.');
       const post = fields(data, target);
-      const { result, publication } = await submitPublication(env.GITHUB_REPOSITORY, target, 'PUT', { message: `${request.method === 'POST' ? 'Create' : 'Update'} post: ${target}`, content: bytes64(encoder.encode(serializePost(post))), ...(request.method === 'PUT' ? { sha: data.sha } : {}) }, github, graphql);
+      const { result, publication } = await submitPublication(env, saved.login, operationId, target, 'PUT', { message: `${request.method === 'POST' ? 'Create' : 'Update'} post: ${target}`, content: bytes64(encoder.encode(serializePost(post))), ...(request.method === 'PUT' ? { sha: data.sha } : {}) }, github, graphql);
       return json({ post: { ...post, sha: result.content.sha }, commitSha: result.commit.sha, publication }, request.method === 'POST' ? 201 : 200);
     }
     fail(404, 'not_found', 'Not found.');
   } catch (error) {
+    if (error instanceof PublicationFailure) return json({ error: error.message, code: 'publication_conflict' }, 409);
     if (error instanceof Failure) return json({ error: error.message, code: error.code }, error.status, error.status === 401 ? { 'Set-Cookie': sessionCookie('', 0) } : {});
     return json({ error: 'The request could not be completed. Your draft is kept. Try again.', code: 'upstream_failed' }, 502);
   }

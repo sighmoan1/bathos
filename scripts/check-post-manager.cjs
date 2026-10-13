@@ -93,6 +93,7 @@ async function checkedPublishingFlow(browser, origin) {
   const context = await browser.newContext({ viewport: { width: 390, height: 812 }, serviceWorkers: 'block' });
   const page = await context.newPage();
   let state = 'pending', saved, submissions = 0, polls = 0;
+  const operations = [], seen = new Set();
   const commitSha = 'f'.repeat(40);
   await context.route('**/api/**', async route => {
     const request = route.request(), pathname = new URL(request.url()).pathname;
@@ -100,11 +101,13 @@ async function checkedPublishingFlow(browser, origin) {
     if (pathname === '/api/session') return json({ authenticated: true, user: { login: 'writer' } });
     if (pathname === '/api/posts' && request.method() === 'GET') return json({ posts: state === 'success' ? [saved] : [] });
     if (pathname === '/api/posts' && request.method() === 'POST') {
-      submissions++; saved = { ...request.postDataJSON(), sha: 'e'.repeat(40) };
-      return json({ post: saved, commitSha, publication: { number: 13, url: 'https://github.com/sighmoan1/bathos/pull/13', queued: true } });
+      const body = request.postDataJSON(); operations.push(body.operationId);
+      assert.match(body.operationId, /^[a-f0-9-]{36}$/);
+      if (!seen.has(body.operationId)) { seen.add(body.operationId); submissions++; saved = { ...body, sha: 'e'.repeat(40) }; return route.abort('connectionreset'); }
+      return json({ post: saved, commitSha, publication: { number: 13, url: 'https://github.com/sighmoan1/bathos/pull/13', queued: true, receipt: 'receipt-for-pr-13' } });
     }
     if (pathname === '/api/publication/13') {
-      polls++; assert.equal(request.method(), 'POST');
+      polls++; assert.equal(request.method(), 'POST'); assert.equal(request.headers()['x-bathos-publication'], 'receipt-for-pr-13');
       return json({ state, merged: state === 'success', message: state === 'failure' ? 'Publishing checks failed. Your changes are saved in GitHub and your draft is kept.' : 'Your post is saved. Publishing automatically after checks pass…' });
     }
     return json({ error: 'Unexpected request' });
@@ -115,7 +118,12 @@ async function checkedPublishingFlow(browser, origin) {
   await page.getByLabel('Description', { exact: true }).fill('Published only after CI passes');
   await page.getByLabel('Your writing').fill('A safe queued post');
   await page.getByRole('button', { name: 'Save to site', exact: true }).click();
+  await page.getByRole('button', { name: 'Resume publishing' }).waitFor();
+  assert.equal(await page.getByRole('button', { name: 'Save to site', exact: true }).isDisabled(), true);
+  assert.ok(await page.evaluate(() => !!localStorage.getItem('bathos:pending-submission')));
+  await page.reload();
   await page.getByRole('link', { name: 'View publishing progress' }).waitFor();
+  assert.equal(operations.length, 2); assert.equal(operations[0], operations[1]);
   assert.equal(await page.getByRole('button', { name: 'Save to site', exact: true }).isDisabled(), true);
   assert.equal(await page.getByRole('button', { name: 'Delete post', exact: true }).isDisabled(), true);
   assert.equal(submissions, 1);
@@ -163,7 +171,7 @@ async function mobileFlow(browser, origin, width) {
     const slug = decodeURIComponent(url.pathname.split('/')[3] || '');
     if (method === 'GET') return json(posts.get(slug) || { error: 'Not found' }, posts.has(slug) ? 200 : 404);
     const body = request.postDataJSON();
-    if (nextFailure) { const code = nextFailure; nextFailure = 0; if (code === 401) authenticated = false; return json({ error: code === 409 ? 'This post changed. Your draft is safe.' : 'Your session expired. Please sign in again.' }, code); }
+    if (nextFailure) { const code = nextFailure; nextFailure = 0; if (code === 401) authenticated = false; return json({ error: code === 409 ? 'This post changed. Your draft is safe.' : 'Your session expired. Please sign in again.', code: code === 409 ? 'conflict' : 'unauthorized' }, code); }
     if (method === 'DELETE') {
       assert.equal(body.sha, posts.get(slug).sha, 'delete must use latest saved file SHA');
       deletes.push(slug); posts.delete(slug); return json({ commitSha: nextCommit() });
@@ -265,7 +273,6 @@ async function mobileFlow(browser, origin, width) {
   assert.equal(await page.getByLabel('Your writing').inputValue(), 'Conflict draft stays here');
   authenticated = true;
   await page.getByRole('button', { name: 'Check sign-in again' }).click();
-  await page.getByRole('button', { name: 'Save to site', exact: true }).click();
   await until(() => writes.length === 3, 'reauthenticated save did not reach API');
   await page.getByText('Saved to GitHub.', { exact: true }).waitFor();
   await page.getByRole('button', { name: 'Delete post', exact: true }).click();

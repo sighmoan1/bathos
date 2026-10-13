@@ -45,7 +45,7 @@ test('phone email form validates input, submits only verified requests, resets c
   expect(await page.evaluate(()=>JSON.stringify(localStorage))).not.toContain('reader@example.test')
   await input.fill('reader@example.test')
   await page.getByRole('button',{name:'Complete verification'}).click()
-  await page.evaluate(()=>{(window as Window & {expireTestChallenge:()=>void}).expireTestChallenge()})
+  await page.evaluate(()=>{const expire=(window as Window & {expireTestChallenge?:()=>void}).expireTestChallenge;if(!expire)throw Error('Challenge test fixture is missing');expire()})
   await expect(submit).toBeDisabled()
   await page.getByRole('button',{name:'Complete verification'}).click()
   status=403
@@ -57,9 +57,9 @@ test('phone email form validates input, submits only verified requests, resets c
   await page.getByRole('button',{name:'Complete verification'}).click()
   await submit.click()
   await expect(page.getByRole('status')).toContainText('Check your inbox')
-  const options=await page.evaluate(()=>(window as Window & {testChallengeOptions:unknown}).testChallengeOptions)
+  const options=await page.evaluate(()=>(window as Window & {testChallengeOptions?:unknown}).testChallengeOptions)
   expect(options).toMatchObject({action:'subscribe',size:'compact'})
-  expect(await page.evaluate(()=>(window as Window & {testChallengeResets:number}).testChallengeResets)).toBe(3)
+  expect(await page.evaluate(()=>(window as Window & {testChallengeResets?:number}).testChallengeResets)).toBe(3)
  }
  expect(errors).toEqual([])
 })
