@@ -10,7 +10,7 @@ type PostWarning = { slug: string; message: string }
 type Draft = { post: Post; savedAt: string }
 type DeviceDraft = Draft & { key: string }
 type Publication = { number: number; url: string; queued: boolean }
-type Publishing = { sha: string; text: string; publication?: Publication; pending?: boolean }
+type Publishing = { sha: string; text: string; publication?: Publication; pending?: boolean; slug?: string; previousSha?: string }
 type InstallPrompt = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> }
 class ApiError extends Error { constructor(message: string, public status: number) { super(message) } }
 async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -180,11 +180,21 @@ export default function ManagePosts() {
     const sha = deployment.sha
     const poll = async (attempt: number) => {
       try {
-        const result = await api<{ state: string; message?: string; merged?: boolean }>(deployment.publication ? `/api/publication/${deployment.publication.number}` : `/api/deployment/${encodeURIComponent(sha)}`, deployment.publication ? { method: "POST" } : {})
+        const result = await api<{ state: string; message?: string; merged?: boolean; closed?: boolean }>(deployment.publication ? `/api/publication/${deployment.publication.number}` : `/api/deployment/${encodeURIComponent(sha)}`, deployment.publication ? { method: "POST" } : {})
         if (cancelled) return
         if (result.merged) { setDeployment(current => current ? { ...current, pending: false } : current); void loadPosts() }
         if (["success", "published", "deployed"].includes(result.state)) { setDeployment({ ...deployment, pending: false, text: "Published. Your changes are live on Bathos." }); return }
-        if (["failure", "failed", "error", "cancelled", "canceled"].includes(result.state)) { setDeployment({ ...deployment, pending: !!deployment.publication && !result.merged, text: result.message || "Saved to GitHub, but publishing failed. Your changes are safe; check the deployment before retrying." }); return }
+        if (["failure", "failed", "error", "cancelled", "canceled"].includes(result.state)) {
+          if (result.closed && deployment.slug) {
+            setPost(current => current?.slug === deployment.slug ? { ...current, sha: deployment.previousSha } : current)
+            setOriginal("")
+            try {
+              const key = draftKey(deployment.slug), draft = JSON.parse(localStorage.getItem(key) || "null")
+              if (validDraft(draft)) { draft.post.sha = deployment.previousSha; localStorage.setItem(key, JSON.stringify(draft)); loadDrafts() }
+            } catch { /* Original writing remains in the device draft. */ }
+          }
+          setDeployment({ ...deployment, pending: !!deployment.publication && !result.merged && !result.closed, text: result.message || "Saved to GitHub, but publishing failed. Your changes are safe; check the deployment before retrying." }); return
+        }
         if (result.message) setDeployment(current => current ? { ...current, text: result.message } : current)
       } catch { if (cancelled) return }
       if (attempt >= 100) { setDeployment(current => current ? { ...current, text: "Your changes are saved. Publishing is taking longer than expected; reload to check again, or view publishing progress." } : current); return }
@@ -192,7 +202,7 @@ export default function ManagePosts() {
     }
     void poll(0)
     return () => { cancelled = true; clearTimeout(timer) }
-  }, [deployment?.sha, deployment?.publication?.number, loadPosts])
+  }, [deployment?.sha, deployment?.publication?.number, loadPosts, loadDrafts])
 
   function enter(value: Post) {
     setPost(value); setOriginal(JSON.stringify(value)); setDraftSlug(value.sha ? value.slug : ""); setPreview(false); setConflict(false); setError(""); setNotice(""); setDraftSaved(false); setRecovery(null)
@@ -249,9 +259,11 @@ export default function ManagePosts() {
     try {
       const result = await api<{ post: Post; commitSha: string; publication?: Publication }>(value.sha ? `/api/posts/${encodeURIComponent(value.slug)}` : "/api/posts", { method: value.sha ? "PUT" : "POST", body: JSON.stringify(value) })
       setPost(result.post); setOriginal(JSON.stringify(result.post)); setDraftSlug(result.post.slug); setDraftSaved(false); setRecovery(null)
-      if (result.publication) keepDraft(result.post, result.post.slug)
+      if (result.publication) {
+        if (keepDraft(result.post, result.post.slug) && draftSlug !== result.post.slug) try { localStorage.removeItem(draftKey(draftSlug)); loadDrafts() } catch { /* The original device draft is also retained. */ }
+      }
       else try { localStorage.removeItem(draftKey(draftSlug)); loadDrafts() } catch { setStorageError("Saved to the site, but this device could not remove the old draft.") }
-      setNotice("Saved to GitHub."); setDeployment({ sha: result.commitSha, publication: result.publication, pending: !!result.publication, text: result.publication ? "Your post is saved. Checking it before publishing automatically…" : "Saved to GitHub. Publishing to Bathos…" }); void loadPosts()
+      setNotice("Saved to GitHub."); setDeployment({ sha: result.commitSha, publication: result.publication, slug: result.post.slug, previousSha: value.sha, pending: !!result.publication, text: result.publication ? "Your post is saved. Checking it before publishing automatically…" : "Saved to GitHub. Publishing to Bathos…" }); void loadPosts()
     } catch (e) { handleError(e) }
     finally { setBusy(false) }
   }

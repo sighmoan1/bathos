@@ -131,7 +131,7 @@ async function checkedPublishingFlow(browser, origin) {
   state = 'success';
   await page.reload();
   await page.getByRole('status').filter({ hasText: 'Published. Your changes are live on Bathos.' }).waitFor();
-  await page.getByRole('heading', { name: 'Checked publication', exact: true }).waitFor();
+  await page.getByRole('heading', { name: 'Checked publication', exact: true, level: 2 }).waitFor();
   assert.equal(await page.evaluate(() => localStorage.getItem('bathos:pending-publication')), null);
   assert.equal(submissions, 1);
   await context.close();

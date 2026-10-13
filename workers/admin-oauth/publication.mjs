@@ -46,7 +46,7 @@ export async function publicationStatus(repository, login, number, canUpdate, gi
   if (pull.merged === true && validSha(pull.merge_commit_sha)) {
     return { ...deploymentState(pull.merge_commit_sha, (await github(`/commits/${pull.merge_commit_sha}/check-runs?per_page=100`)).check_runs || []), commitSha: pull.merge_commit_sha, merged: true };
   }
-  if (pull.state !== 'open') return { state: 'failure', message: 'Publication was closed without publishing. Your draft is kept.' };
+  if (pull.state !== 'open') return { state: 'failure', closed: true, message: 'Publication was closed without publishing. Your draft is kept.' };
   if (pull.mergeable_state === 'dirty') return { state: 'failure', message: 'The post changed while publishing. Resolve the conflict in GitHub before publishing.' };
   const runs = (await github(`/commits/${pull.head.sha}/check-runs?per_page=100`)).check_runs || [];
   const relevant = runs.filter(run => (run.name === 'Release checks' && run.app?.slug === 'github-actions') || (run.name === 'Cloudflare Pages' && run.app?.slug === 'cloudflare-workers-and-pages'));
