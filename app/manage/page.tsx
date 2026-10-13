@@ -5,7 +5,7 @@ import ReactMarkdown from "react-markdown"
 import { ArrowLeft, Check, Download, Feather, Plus, Search, Trash2, WifiOff } from "lucide-react"
 import "./manage.css"
 
-type Post = { slug: string; title: string; description: string; date: string; tags: string[]; body: string; sha?: string }
+type Post = { slug: string; title: string; description: string; date: string; tags: string[]; inReplyTo?: string[]; body: string; sha?: string }
 type PostWarning = { slug: string; message: string }
 type Draft = { post: Post; savedAt: string }
 type DeviceDraft = Draft & { key: string }
@@ -26,7 +26,7 @@ async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 const emptyPost = (): Post => ({ slug: "", title: "", description: "", date: new Date().toISOString().slice(0, 10), tags: [], body: "" })
 const draftKey = (slug: string) => `bathos:post-draft:${slug || "new"}`
-const validDraft = (draft: Draft) => draft?.post && typeof draft.savedAt === "string" && ["slug", "title", "description", "date", "body"].every(key => typeof draft.post[key as keyof Post] === "string") && (draft.post.sha === undefined || typeof draft.post.sha === "string") && Array.isArray(draft.post.tags) && draft.post.tags.every(tag => typeof tag === "string")
+const validDraft = (draft: Draft) => draft?.post && typeof draft.savedAt === "string" && ["slug", "title", "description", "date", "body"].every(key => typeof draft.post[key as keyof Post] === "string") && (draft.post.sha === undefined || typeof draft.post.sha === "string") && Array.isArray(draft.post.tags) && draft.post.tags.every(tag => typeof tag === "string") && (draft.post.inReplyTo === undefined || (Array.isArray(draft.post.inReplyTo) && draft.post.inReplyTo.every(target => typeof target === "string")))
 const slugify = (title: string) => title.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 100).replace(/-$/, "")
 
 export default function ManagePosts() {
@@ -212,10 +212,20 @@ export default function ManagePosts() {
     if (!post) return
     setPost({ ...post, [field]: value }); setNotice("")
   }
+  function replyTargets(targets?: string[]) {
+    return [...new Set((targets || []).map(target => target.trim()).filter(Boolean).map(target => {
+      let url: URL
+      try { url = new URL(target) } catch { throw new Error("Add a full HTTP or HTTPS address for each reply, one per line.") }
+      if (!/^https?:\/\//i.test(target) || !["http:", "https:"].includes(url.protocol) || url.username || url.password || /[\u0000-\u0020\u007f]/.test(target)) throw new Error("Reply addresses must use HTTP or HTTPS, without credentials or whitespace.")
+      return url.href
+    }))]
+  }
   async function save() {
     if (!post || busy || !online || session !== "in" || conflict) return
     const value = { ...post, slug: post.slug || slugify(post.title), tags: [...new Set(post.tags.map(tag => tag.trim()).filter(Boolean))] }
     if (!value.title.trim() || !value.body.trim() || !(value.sha ? /^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$/ : /^[a-z0-9]+(?:-[a-z0-9]+)*$/).test(value.slug) || !value.date) { setError("Add a title, a date, some writing, and a URL name using letters, numbers and hyphens."); return }
+    try { if (value.inReplyTo !== undefined) value.inReplyTo = replyTargets(value.inReplyTo) }
+    catch (e) { setError(e instanceof Error ? e.message : "Check your reply addresses."); return }
     setBusy(true); setError(""); setPost(value); keepDraft(value, draftSlug)
     try {
       const result = await api<{ post: Post; commitSha: string }>(value.sha ? `/api/posts/${encodeURIComponent(value.slug)}` : "/api/posts", { method: value.sha ? "PUT" : "POST", body: JSON.stringify(value) })
@@ -265,6 +275,7 @@ export default function ManagePosts() {
           <label>Title<input value={post.title} maxLength={300} placeholder="What’s on your mind?" onChange={e => change("title", e.target.value)} /></label>
           <label>Description<textarea className="pm-description" value={post.description} maxLength={2000} placeholder="A short introduction for the reader" onChange={e => change("description", e.target.value)} /></label>
           <div className="pm-fields"><label>Date<input type="date" value={post.date.slice(0, 10)} onChange={e => change("date", e.target.value)} /></label><label>Tags<input value={post.tags.join(", ")} placeholder="life, ideas" onChange={e => change("tags", e.target.value.split(",").map(t => t.trim()))} /><span className="pm-small">Separate tags with commas.</span></label></div>
+          <label>In reply to<textarea aria-label="In reply to" aria-describedby="reply-target-help" className="pm-description" value={(post.inReplyTo || []).join("\n")} placeholder="https://example.com/the-original-post/" onChange={e => change("inReplyTo", e.target.value.split("\n"))} /><span id="reply-target-help" className="pm-small">Add the original post’s full address, one per line. Leave empty for an ordinary post.</span></label>
           {!post.sha && <label>URL name<input value={post.slug} placeholder={slugify(post.title) || "my-new-post"} pattern="[a-z0-9]+(-[a-z0-9]+)*" maxLength={100} onChange={e => change("slug", e.target.value)} /><span className="pm-small">Leave blank to use the title.</span></label>}
           <div className="pm-writing-head"><label htmlFor="post-body">Your writing</label><div className="pm-tabs" role="group" aria-label="Editor view"><button type="button" aria-pressed={!preview} onClick={() => setPreview(false)}>Write</button><button type="button" aria-pressed={preview} onClick={() => setPreview(true)}>Preview</button></div></div>
           {preview ? <article className="pm-preview"><h2>{post.title || "Untitled post"}</h2>{post.body ? <ReactMarkdown components={{ a: props => <a {...props} target="_blank" rel="noopener noreferrer" /> }}>{post.body}</ReactMarkdown> : <p>Your writing will appear here.</p>}</article> : <textarea id="post-body" className="pm-body" value={post.body} placeholder="Start writing…\n\nMarkdown works here." onChange={e => change("body", e.target.value)} />}
