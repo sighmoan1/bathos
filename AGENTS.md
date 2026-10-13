@@ -20,7 +20,7 @@ The owner wants completed project changes deployed automatically. Unless the use
 
 ## Email subscriptions
 
-Subscriber emails must be ad-free. Do not enable advertising, sponsorships, or an ad-supported delivery tier. Only display email signup after the real newsletter and delivery path are configured and verified; document the provider and any owner-approved recurring cost.
+Subscriber emails must be ad-free. Do not enable advertising, sponsorships, or an ad-supported delivery tier. Bathos owns its subscriber list, consent flow, delivery queue and scheduling; Resend is the mail transport. Only display email signup after this backend and delivery path are configured and verified; document the provider and any owner-approved recurring cost.
 
 ## Publishing article images
 
