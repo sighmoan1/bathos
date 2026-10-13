@@ -5,7 +5,9 @@
   "scripts": {
     "test": "node --test test/*.test.mjs",
     "check": "wrangler deploy --dry-run",
-    "deploy": "wrangler deploy"
+    "deploy": "node refuse-default-deploy.mjs",
+    "check:production": "wrangler deploy --config wrangler.production.jsonc --dry-run",
+    "deploy:production": "wrangler deploy --config wrangler.production.jsonc"
   },
   "dependencies": {
     "entities": "6.0.1",
