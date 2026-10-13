@@ -35,11 +35,22 @@ const validSlug = slug => typeof slug === 'string' && slug.length <= 100 && /^[a
 // Existing public URLs are case-sensitive. New filenames still use lowercase.
 const validExistingSlug = slug => typeof slug === 'string' && slug.length <= 100 && /^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$/.test(slug);
 const validSha = sha => typeof sha === 'string' && /^[a-f0-9]{40}$/.test(sha);
+export function replyTargets(value) {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value)) fail(400, 'invalid_post', 'Reply URLs must be a list of absolute HTTP(S) URLs.');
+  return [...new Set(value.map(target => {
+    if (typeof target !== 'string' || target.trim() !== target || /[\u0000-\u0020\u007f]/.test(target)) fail(400, 'invalid_post', 'Reply URLs must be absolute HTTP(S) URLs without whitespace.');
+    let url;
+    try { url = new URL(target); } catch { fail(400, 'invalid_post', 'Reply URLs must be absolute HTTP(S) URLs.'); }
+    if (!/^https?:\/\//i.test(target) || !['http:', 'https:'].includes(url.protocol) || url.username || url.password) fail(400, 'invalid_post', 'Reply URLs must be absolute HTTP(S) URLs without credentials.');
+    return url.href;
+  }))];
+}
 function fields(data, slug) {
   if (!data || typeof data !== 'object' || Array.isArray(data) || !validExistingSlug(slug)) fail(400, 'invalid_post', 'Use a filename containing lowercase letters, numbers and hyphens.');
-  if (Object.keys(data).some(k => !['slug','title','description','date','tags','body','sha'].includes(k)) || (data.slug !== undefined && data.slug !== slug)) fail(400, 'invalid_post', 'Unexpected post fields.');
+  if (Object.keys(data).some(k => !['slug','title','description','date','tags','body','sha','inReplyTo'].includes(k)) || (data.slug !== undefined && data.slug !== slug)) fail(400, 'invalid_post', 'Unexpected post fields.');
   if (typeof data.title !== 'string' || !data.title.trim() || data.title.length > 300 || typeof data.description !== 'string' || !data.description.trim() || data.description.length > 2000 || typeof data.body !== 'string' || !data.body.trim() || encoder.encode(data.body).length > 100000 || typeof data.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(data.date) || !Number.isFinite(Date.parse(`${data.date}T00:00:00Z`)) || new Date(`${data.date}T00:00:00Z`).toISOString().slice(0, 10) !== data.date || !Array.isArray(data.tags) || data.tags.length > 30 || data.tags.some(t => typeof t !== 'string' || !t.trim() || t.length > 100)) fail(400, 'invalid_post', 'Provide a title, description, valid date, tags and Markdown body.');
-  return { slug, title: data.title, description: data.description, date: data.date, tags: data.tags, body: data.body };
+  return { slug, title: data.title, description: data.description, date: data.date, tags: data.tags, body: data.body, ...(data.inReplyTo !== undefined ? { inReplyTo: replyTargets(data.inReplyTo) } : {}) };
 }
 export function parsePost(content, slug, sha) {
   if (encoder.encode(content).length > LIMIT) fail(422, 'invalid_content', 'This post is too large to edit.');
@@ -49,8 +60,9 @@ export function parsePost(content, slug, sha) {
   return { ...fields({ ...metadata, body: match[2].replace(/^\r?\n/, '') }, slug), sha };
 }
 export function serializePost(post) {
-  const { title, description, date, tags, body } = post;
-  return `---\n${stringify({ title, description, date, tags }, { lineWidth: 0 })}---\n\n${body}`;
+  const { title, description, date, tags, body, inReplyTo } = post;
+  const targets = replyTargets(inReplyTo);
+  return `---\n${stringify({ title, description, date, tags, ...(targets.length ? { inReplyTo: targets } : {}) }, { lineWidth: 0 })}---\n\n${body}`;
 }
 async function requestBody(request) {
   if (!request.headers.get('Content-Type')?.toLowerCase().startsWith('application/json')) fail(415, 'invalid_json', 'Send JSON content.');
