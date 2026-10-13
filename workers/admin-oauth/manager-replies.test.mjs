@@ -1,6 +1,8 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {handleRequest} from './index.mjs';
+import {handleRequest as actualHandleRequest} from './index.mjs';
+import {handleTestRequest} from './publication-fixture.mjs';
+const handleRequest = (request, env, upstream) => handleTestRequest(actualHandleRequest, request, env, upstream);
 import {parsePost, serializePost, replyTargets, sealSession, sessionCookie} from './manager.mjs';
 const env={CMS_ORIGIN:'https://bathos.org',OAUTH_ORIGIN:'https://bathos.org',GITHUB_REPOSITORY:'sighmoan1/bathos',SESSION_SECRET:btoa('12345678901234567890123456789012')};
 const sha='a'.repeat(40),commit='b'.repeat(40);

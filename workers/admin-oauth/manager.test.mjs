@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { handleRequest } from './index.mjs';
+import { handleRequest as actualHandleRequest } from './index.mjs';
+import { handleTestRequest } from './publication-fixture.mjs';
+const handleRequest = (request, env, upstream) => handleTestRequest(actualHandleRequest, request, env, upstream);
 import { sealSession, sessionCookie, parsePost, serializePost, deploymentState } from './manager.mjs';
 const env = { CMS_ORIGIN: 'https://bathos.org', OAUTH_ORIGIN: 'https://bathos.org', GITHUB_REPOSITORY: 'sighmoan1/bathos', GITHUB_CLIENT_ID:'client', GITHUB_CLIENT_SECRET:'secret', SESSION_SECRET: btoa('12345678901234567890123456789012') };
 const sha = 'a'.repeat(40), commit = 'b'.repeat(40);
@@ -34,15 +36,15 @@ test('YAML serialization round-trips UTF8 multiline metadata and Markdown exactl
  assert.deepEqual(parsed,{...post,sha});
  assert.throws(()=>parsePost('---\ntitle: a\ntitle: b\n---\nbody','test',sha));
 });
-test('create commits only content Markdown on main and returns new revision without token',async()=>{
+test('create commits only content Markdown on a publishing branch and returns new revision without token',async()=>{
  let calls=0;
  const response=await handleRequest(await req('/api/posts','POST',post),env,async(url,opts)=>{
   calls++;assert.equal(url,'https://api.github.com/repos/sighmoan1/bathos/contents/content/test-post.md');assert.equal(opts.method,'PUT');assert.equal(opts.headers.Authorization,'Bearer private-token');
-  const data=JSON.parse(opts.body);assert.equal(data.branch,'main');assert.equal(data.sha,undefined);
+  const data=JSON.parse(opts.body);assert.match(data.branch,/^codex\/publish-writer-test-post-/);assert.equal(data.sha,undefined);
   assert.deepEqual(parsePost(new TextDecoder().decode(Uint8Array.from(atob(data.content),c=>c.charCodeAt(0))),post.slug,sha),{...post,sha});
   return Response.json({content:{sha},commit:{sha:commit}});
  });
- assert.equal(response.status,201);assert.deepEqual(await response.json(),{post:{...post,sha},commitSha:commit});assert.equal(calls,1);
+ assert.equal(response.status,201);const value=await response.json();assert.match(value.publication.receipt,/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/);assert.match(value.post.sha,/^[a-f0-9]{40}$/);delete value.publication.receipt;delete value.post.sha;assert.deepEqual(value,{post,commitSha:commit,publication:{number:123,url:'https://github.com/sighmoan1/bathos/pull/123',queued:true}});assert.equal(calls,1);
 });
 test('update and delete require optimistic SHA, GitHub conflict never retries or leaks upstream errors',async()=>{
  for(const method of ['PUT','DELETE']) {
