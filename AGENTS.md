@@ -21,3 +21,12 @@ The owner wants completed project changes deployed automatically. Unless the use
 ## Email subscriptions
 
 Subscriber emails must be ad-free. Do not enable advertising, sponsorships, or an ad-supported delivery tier. Only display email signup after the real newsletter and delivery path are configured and verified; document the provider and any owner-approved recurring cost.
+
+## Publishing article images
+
+- Store article images in `public/images/posts/<slug>/<name>.<extension>` and reference `/images/posts/<slug>/<name>.<extension>` in Markdown. Preserve the article slug's case. Do not use temporary attachment paths in published posts.
+- Inspect the actual image before writing alt text. Describe its relevant content; put source, date and contextual explanation in an optional caption. Never invent a screenshot or use a placeholder when an attachment is unavailable.
+- Use `pnpm blog:add-image --post SLUG --file PATH --name NAME --alt "Description" --caption "Optional caption" --after "Exact heading"`. The article must already exist in `content/`. `--name` is an extension-free filename; omit it only if the source basename already contains letters, numbers and hyphens. `--after` inserts immediately after one matching Markdown heading; omit it to append. Omit `--caption` for no caption.
+- The helper validates and fully decodes still PNG, JPEG, WebP or GIF images, requires matching extensions, limits files to 10 MiB and 40 million pixels, escapes Markdown text, and refuses overwrites, duplicate references, unsafe paths and symlinked destinations. It preserves source bytes and adds accessible image Markdown plus an italic caption paragraph.
+- Run the helper in your isolated task worktree. Review the generated Markdown and image on desktop and mobile. Commit the image, article and any helper changes together; the helper does not commit, push or deploy. Follow all release gates above, including exact-commit Pages checks and fresh production verification.
+- Conversation attachments must be downloaded into the task workspace first. If using GitHub's binary blob API, encode the original bytes as base64, include image and article in the same tree/commit, and apply the same validation. Ask for the missing attachment rather than publishing a broken image reference.
