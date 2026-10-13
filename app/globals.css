@@ -230,6 +230,13 @@ html.reader-phone { font-size: calc(16px * var(--reader-phone-scale, 1)); }
 
 .reader-card-body { display: contents; }
 .reader-phone .reader-card-body { display: block; flex: 1; min-height: 0; overflow-y: auto; }
+/* Compact desktop windows need the same reserved reading action as phones.
+   Keep long titles, tags and previews scrollable within the remaining space. */
+@media (max-width: 600px), (max-height: 500px) {
+  .reader-card-content { height: 100%; min-height: 0; justify-content: flex-start; }
+  .reader-card-body { display: block; flex: 1; min-height: 0; overflow-y: auto; }
+  .reader-card-actions { flex-shrink: 0; margin-top: auto; padding-top: .25rem; }
+}
 @media (max-height: 500px) {
   .reader-phone .reader-header-row { flex-wrap: nowrap; gap: .25rem; }
   .reader-phone .reader-header-row > div:first-child { gap: .25rem; }
