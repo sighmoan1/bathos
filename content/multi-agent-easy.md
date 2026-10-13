@@ -37,7 +37,7 @@ I know little about code quality so on my projects I will often tell the agents 
 
 This approach has not failed me so far. I'm not doing especially complicated things and it's only me working on these projects. But it seems fine for getting sites with auth and databases up and running. 
 
-You can also ask the models to think of ways to improve your product. Get them to raise Github Issues with "suggestion" in the title, and have Agents.md explain not to pick up suggestions unless given the issue number and told to do so. Then you can approve work on the ones you like and bin off the ones you don't. Don't know what you like? Ask a model to review and rate the suggestions and provide reasoning. 
+You can also ask the models to think of ways to improve your product. Get them to raise Github Issues labelled "suggestion", and have Agents.md explain not to pick up suggestions. Then you can approve work on the ones you like and bin off the ones you don't by asking it to delete/archive or change the label to approved. Don't know what you like? Ask a model to review and rate the suggestions and provide reasoning. 
 
 So this is the easy way – you get the AI to do everything and if you don't know what to get it to do, you ask it.  The mindset shift is that all your work should be happening in the conversation with the agent. But the project work and the memory of what is happening lives in GitHub. This allows you to change agents, models or conversations without starting again. And it means that you can run subagents that don't need a lot of context to do work on the project effectively. They can get their context from GitHub.
 
@@ -45,7 +45,7 @@ The things I think you should be asking your agent to write into your projects' 
 
 * Check what everyone else is doing before starting work. Look at the open issues and pull requests and don't start work someone else is already doing.
 * Use GitHub issues to track work. Every task should have an issue describing what needs doing and how we'll know it's done.
-* Claim your work. Mark an issue as in progress before starting it, so other agents know to leave it alone.
+* Claim your work. Label an issue as in progress before starting it, so other agents know to leave it alone.
 * Use a separate branch and worktree for each issue. This lets multiple agents work simultaneously without overwriting each other's changes.
 * Create a pull request for every change. Link it to the issue, run the tests and record what you've done.
 * Keep everyone informed. Update the issue or pull request as you go, particularly when you're blocked or handing work to another agent. Close issues when you have merged the related PR.
@@ -69,3 +69,113 @@ You can share this blog post with your agent and say "init a project that works 
 You might find that your agent app doesn't have the capability to init a project. You might need to initialise the project yourself then direct the agent to work on it. They will be able to explain how you should do this.
 
 I also have ideas on how to setup projects with infrastructure that's easy to work with using agents. That will be a [separate post](https://bathos.org/posts/architecture-the-easy-way).
+
+## Footgun review
+
+I asked Sol to look for footguns in this approach and suggest defences. Here's what it came up with.
+
+**Agents reviewing and merging their own work.** An agent can confidently approve code that doesn't work. Have a different agent review each PR, and require automated checks to pass before merging.
+
+**Tests are optional.** If you don't know much about software engineering, automated tests are more important, not less. Set up CI to run tests, linting and type checks on every PR. Don't let agents merge failing code.
+
+**Agents have too much freedom.** An instruction to complete an issue might lead an agent to delete data, change infrastructure or expose secrets. Give agents explicit boundaries. Require human approval for destructive operations, production credentials and anything that costs money.
+
+**Worktrees don't isolate everything.** Agents working in separate worktrees can still interfere with each other through shared databases, ports and external services. Give them separate test environments where necessary.
+
+**A clean merge isn't necessarily working software.** Two changes can work independently and break when combined. Run tests against the latest main branch and check that deployments actually work.
+
+**GitHub issue claims aren't atomic.** Two agents might pick up the same issue simultaneously. For a handful of agents, checking existing claims is probably enough. At greater scale, use a dispatcher or proper locking.
+
+**Agents can declare victory prematurely.** Completing a task isn't the same as achieving the intended outcome. Write acceptance criteria into issues and have another agent verify them.
+
+**There's no rollback plan.** Agents can deploy broken software just as quickly as working software. Make deployments reversible and have a way to detect failures.
+
+**More agents can mean less productivity.** Parallel work creates coordination, review and integration costs. Limit concurrent work and measure working features rather than completed issues.
+
+Most of these can be addressed with a better `AGENTS.md`, GitHub branch protection and a few CI workflows. None requires building Gas Town.
+
+The three I'd prioritise are independent review, mandatory automated checks and explicit limits on what agents can do without asking. The rest can wait until they become problems.
+
+## What Sol says Agents.md should actually say
+
+```
+## This is what AGENTS.md should actually say
+
+Taking those footguns seriously, I'd replace the original coordination instructions with something like this:
+
+```markdown
+# Agent instructions
+
+## Before starting work
+
+1. Read this file and the repository README.
+2. Check open GitHub issues and existing claims.
+3. Claim an issue by commenting on it before starting.
+4. Create a dedicated branch and worktree.
+5. Do not work on files another agent is actively changing without coordinating.
+6. If the issue is ambiguous, ask or propose an approach before implementing it.
+
+## Implementation
+
+1. Work only on the claimed issue. Don't expand scope without approval.
+2. Write or update tests for changed behaviour.
+3. Run tests, linting and type checks before opening a PR.
+4. Never commit secrets, credentials or personal data.
+5. Don't change production infrastructure, authentication, permissions or database schemas without explicit approval.
+6. Use isolated test resources where possible. Don't modify shared services without coordinating.
+
+## Pull requests
+
+1. Open a PR referencing the issue.
+2. Explain what changed, how it was tested and any remaining risks.
+3. Request review from an agent other than the implementer.
+4. Reviewers must inspect the changes and run relevant checks, not simply approve.
+5. Fix review findings before merging.
+6. Never merge with failing required checks.
+7. Only merge when independent review and required CI checks have passed.
+8. Check that the combined changes work against the latest main branch.
+
+## Completion
+
+1. Verify the issue's acceptance criteria, not just that the code builds.
+2. Check deployment health where applicable.
+3. Close the issue only when the intended behaviour has been verified.
+4. Record important decisions and unresolved problems in the repository.
+5. Report anything requiring human intervention.
+
+## Stop and ask
+
+Get human approval before:
+
+- Deleting or modifying production data.
+- Changing production secrets or credentials.
+- Making destructive or irreversible database changes.
+- Changing authentication or authorisation rules.
+- Exposing services or data publicly.
+- Incurring new infrastructure costs.
+- Performing destructive Git operations on shared branches.
+- Making substantial changes outside the issue's scope.
+
+## General principles
+
+- Prefer simple solutions over new infrastructure.
+- Use existing tools before introducing dependencies.
+- Don't claim tests passed unless you ran them.
+- Don't claim a feature works without evidence.
+- Don't confuse completing a task with achieving its intended outcome.
+- If you're uncertain, say so.
+```
+
+## What this doesn't solve
+
+This works reasonably well when you've got a few agents working on separate issues. It starts to fall apart when you want agents to manage the whole process themselves.
+
+Someone still needs to decide what to work on, identify dependencies between issues, notice when agents get stuck, resolve conflicts, and decide whether the work is actually finished.
+
+In this workflow, that someone is me.
+
+You can get agents to do some of this, but then you need to coordinate the coordinating agents. You need to know which agents are doing what, whether they're still running, whether they're making progress, and whether they're spending a fortune doing nothing useful.
+
+At some point you start wondering whether you could automate the whole thing. This is where the software factory rabbit hole begins.
+
+I'll write about that in [Multiple agents the hard way](/posts/multi-agent-hard/).
