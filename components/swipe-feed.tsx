@@ -256,11 +256,12 @@ export function SwipeFeed({ initialArticles, allTags, initialReadingArticle }: S
 
   return (
     <div className="reader-shell bg-background">
+      <div data-reader-background className="contents">
       {/* Header */}
       <header className="relative z-20 bg-background/80 backdrop-blur-lg border-b border-border pt-[env(safe-area-inset-top)]">
         <div className="w-full px-4 md:px-8 py-3">
           <div className="reader-header-row flex items-center justify-between">
-            <div className="flex items-center gap-3"><h1 className="text-lg font-bold text-foreground">Bathos</h1><a href="/subscribe/" aria-label="Subscribe to Bathos" className="inline-flex min-h-11 items-center gap-1 text-xs text-muted-foreground hover:text-foreground"><Rss size={16} /><span>Subscribe</span></a></div>
+            <div className="flex items-center gap-3"><h1 className="text-lg font-bold text-foreground">Bathos</h1><a href="/articles/" className="inline-flex min-h-11 items-center text-xs text-muted-foreground hover:text-foreground">Articles</a><a href="/subscribe/" aria-label="Subscribe to Bathos" className="inline-flex min-h-11 items-center gap-1 text-xs text-muted-foreground hover:text-foreground"><Rss size={16} /><span className="reader-subscribe-label">Subscribe</span></a></div>
             <div className="reader-header-tools flex items-center gap-1">
               <ReaderPwa />
               {hasArticles && (
@@ -300,6 +301,7 @@ export function SwipeFeed({ initialArticles, allTags, initialReadingArticle }: S
               <button
                 onClick={() => setShowSaved(true)}
                 aria-label="Open saved articles"
+                data-dialog-fallback
                 className="relative p-2 rounded-lg hover:bg-secondary transition-colors"
               >
                 <Bookmark className="w-5 h-5 text-foreground" />
@@ -447,6 +449,8 @@ export function SwipeFeed({ initialArticles, allTags, initialReadingArticle }: S
           </div>
         )}
       </main>
+
+      </div>
 
       {/* Article Reader Modal */}
       <AnimatePresence>

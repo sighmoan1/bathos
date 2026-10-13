@@ -3,8 +3,8 @@
 import { ArrowLeft, Bookmark, X } from "lucide-react"
 import type { Article } from "@/lib/articles"
 import ReactMarkdown from "react-markdown"
-import { motion } from "framer-motion"
-import { useEscapeKey } from "@/lib/use-feed-controls"
+import { motion, useReducedMotion } from "framer-motion"
+import { useReaderDialog } from "@/lib/use-reader-dialog"
 
 import { postPath } from "@/lib/post-links"
 import { ReplyContext } from "./reply-context"
@@ -22,13 +22,23 @@ interface ArticleReaderProps {
 }
 
 export function ArticleReader({ article, onClose, onSave, onDismiss, onTagClick, animateEntry = true }: ArticleReaderProps) {
-  useEscapeKey(true, onClose)
+  const { ref, titleId, present } = useReaderDialog(onClose)
+  const reducedMotion = useReducedMotion()
 
   return (
     <motion.div
-      initial={animateEntry ? { opacity: 0, y: 50 } : false}
+      ref={ref}
+      role="dialog"
+      aria-modal={present ? true : undefined}
+      aria-labelledby={titleId}
+      aria-hidden={!present || undefined}
+      inert={!present}
+      tabIndex={-1}
+      data-reader-dialog={present ? "active" : "exiting"}
+      initial={reducedMotion || !animateEntry ? false : { opacity: 0, y: 50 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 50 }}
+      exit={{ opacity: 0, y: reducedMotion ? 0 : 50 }}
+      transition={{ duration: reducedMotion ? 0 : 0.2 }}
       className="fixed inset-0 bg-background z-50 overflow-y-auto overscroll-contain"
     >
       {/* Header */}
@@ -47,6 +57,7 @@ export function ArticleReader({ article, onClose, onSave, onDismiss, onTagClick,
               onClick={onDismiss}
               className="p-2 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
               title="Never show again"
+              aria-label="Hide this article on this device"
             >
               <X className="w-5 h-5" />
             </button>
@@ -54,6 +65,7 @@ export function ArticleReader({ article, onClose, onSave, onDismiss, onTagClick,
               onClick={onSave}
               className="p-2 rounded-lg bg-success/10 text-success hover:bg-success/20 transition-colors"
               title="Save for later"
+              aria-label="Save for later"
             >
               <Bookmark className="w-5 h-5" />
             </button>
@@ -80,7 +92,7 @@ export function ArticleReader({ article, onClose, onSave, onDismiss, onTagClick,
           </div>
         )}
 
-        <h1 className="p-name text-3xl md:text-4xl font-bold text-foreground mb-4 leading-tight">{article.title}</h1>
+        <h1 id={titleId} className="p-name text-3xl md:text-4xl font-bold text-foreground mb-4 leading-tight">{article.title}</h1>
 
         <a className="u-url inline-block mb-4 text-sm underline text-muted-foreground" href={`https://bathos.org${postPath(article.slug)}`}>Permalink</a>
         <ReplyContext inReplyTo={article.inReplyTo} />
