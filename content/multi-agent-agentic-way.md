@@ -1,7 +1,7 @@
 ---
 title: Multiple agents the agentic way
 description: While working on my blog, ChatGPT unexpectedly offered to coordinate two independently started coding conversations, using GitHub issues and branches to organise work across them. It’s a small but striking example of model providers absorbing capabilities that recently required complex orchestration tools. Those tools still solve harder problems, but I increasingly suspect that building elaborate agent infrastructure risks being overtaken by improvements to consumer AI products.
-date: 2026-10-13
+date: "2026-10-13"
 tags:
   - AI
   - agents
