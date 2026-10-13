@@ -1,0 +1,25 @@
+name: Bathos shared edge - GitOps
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - infrastructure/edge/**
+      - .github/workflows/bathos-edge.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: vars.BATHOS_DEPLOY_ENABLED == 'true'
+    uses: sighmoan1/govuk-delegate-starter/.github/workflows/bathos-deploy-compose.yml@main
+    with:
+      app: bathos-edge
+      compose-file: infrastructure/edge/compose.yml
+    secrets:
+      BATHOS_SSH_HOST: ${{ secrets.BATHOS_SSH_HOST }}
+      BATHOS_SSH_USER: ${{ secrets.BATHOS_SSH_USER }}
+      BATHOS_SSH_PRIVATE_KEY: ${{ secrets.BATHOS_SSH_PRIVATE_KEY }}
+      BATHOS_SSH_KNOWN_HOSTS: ${{ secrets.BATHOS_SSH_KNOWN_HOSTS }}
