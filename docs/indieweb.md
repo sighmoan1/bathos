@@ -7,7 +7,7 @@ inReplyTo:
   - https://example.org/posts/original-article/
 ```
 
-The content loaders normalize and deduplicate absolute HTTP(S) URLs and reject malformed or unsafe values. The article exposes visible `u-in-reply-to` links, an `h-entry`, a canonical `u-url`, a `p-name` title and `e-content` body. Ordinary posts need no reply field. Add replies through an issue-linked repository content change, validate it and wait for its exact production deployment before sending a notification. Reply metadata alone does not notify another site. Publishing-manager support is tracked in #52; the existing manager rejects posts with this field until that update is deployed.
+The content loaders normalize and deduplicate absolute HTTP(S) URLs and reject malformed or unsafe values. The article exposes visible `u-in-reply-to` links, an `h-entry`, a canonical `u-url`, a `p-name` title and `e-content` body. Ordinary posts need no reply field. Author a reply in the mobile publishing manager using its In reply to field (one full URL per line), or through an issue-linked repository content change. Validate it and wait for its exact production deployment before sending a notification. Reply metadata alone does not notify another site. The manager preserves existing targets, validates them before saving and removes them when the field is explicitly cleared; its frontend and publishing Worker must both include the #52 update.
 
 ## Send a published reply
 
