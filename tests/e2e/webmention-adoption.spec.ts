@@ -33,10 +33,10 @@ test('Webmention guide explains published replies and receiver availability', as
  }
 });
 
-test('configured form submits a real form-encoded POST without JavaScript', async ({browser})=>{
- const context = await browser.newContext({javaScriptEnabled:false});
+test('configured form submits a real form-encoded POST without JavaScript', async ({browser,baseURL})=>{
+ const context = await browser.newContext({javaScriptEnabled:false,baseURL});
  const page = await context.newPage();
- await page.goto(`${process.env.READER_BASE_URL ?? 'http://127.0.0.1:3021'}/webmentions/`);
+ await page.goto('/webmentions/');
  if(await page.getByLabel('Your published reply URL').count() === 0) {
   await expect(page.getByRole('status')).toContainText('submission is currently unavailable');
   await expect(page.locator('form')).toHaveCount(0);
