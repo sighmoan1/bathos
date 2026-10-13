@@ -4,7 +4,9 @@ Open https://bathos.org/manage/ and choose **Sign in with GitHub**. Use an accou
 
 Create a post with **New post**, enter its title, description, date, tags and Markdown body, and preview it before saving. A post's slug determines its Markdown filename and must be unique. Open an existing post to edit it. Deletion requires confirmation and removes that post from the repository; the reader's trash only hides posts on that device.
 
-Saving commits content to GitHub. The public site changes after Cloudflare Pages successfully builds that commit. Check publishing status and open the public site to verify the result. A saved commit is not a guarantee that deployment has finished. If another editor changed a post, a conflict preserves your draft: compare the latest version before retrying. Git history can recover a deleted post.
+Saving keeps your content in GitHub and starts automatic publishing. The manager creates a pull request, waits for the required tests and preview build, then merges automatically; you do not need to approve it manually. Only accounts with repository write access can start this flow. The public site changes after Cloudflare Pages deploys the merged commit. Check publishing status and open the public site to verify the result. A saved change is not a guarantee that deployment has finished. If another editor changed a post, a conflict preserves your draft: compare the latest version before retrying. Git history can recover a deleted post.
+
+While publishing, another Save or Delete is disabled to avoid overlapping revisions. You can keep writing a device draft. Pending publishing progress survives a reload on the same device. Failed checks leave the post saved in GitHub and preserve your draft; the progress link shows what needs attention. After repairing or rerunning checks, reload the manager to resume tracking. Agents can create posts through the same branch-and-pull-request flow and enable auto-merge after the required checks; no special publishing bypass is needed. See [CI and publishing](ci.md).
 
 ## Add it to your home screen
 

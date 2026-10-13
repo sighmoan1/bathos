@@ -1,6 +1,6 @@
 # GitHub authentication for the post manager
 
-The installable mobile post manager lives at `/manage/`; `/admin/` redirects there. The static Pages site calls a same-origin Cloudflare Worker at `/api/*`. GitHub remains the authority for access and stores Markdown posts under `content/` on `main`. Publishing and deletion commit to GitHub and take effect after a successful Pages deployment.
+The installable mobile post manager lives at `/manage/`; `/admin/` redirects there. The static Pages site calls a same-origin Cloudflare Worker at `/api/*`. GitHub remains the authority for access and stores published Markdown posts under `content/` on `main`. Publishing and deletion save to a new `codex/publish-*` branch and pull request, enable auto-merge, and take effect after the required checks, merge and successful Pages deployment. See [CI and publishing](ci.md).
 
 ## Production configuration
 
