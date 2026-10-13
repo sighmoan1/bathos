@@ -17,3 +17,7 @@ The owner wants completed project changes deployed automatically. Unless the use
 - Create each worktree outside the primary checkout, for example `git worktree add ../bathos-worktrees/TASK -b TASK origin/main` after `git fetch origin`.
 - Keep dependency installs, generated output, validation and commits in your own worktree. Do not share `node_modules` or build directories between worktrees.
 - Link each PR to its issue, check for overlapping PRs, and integrate current `origin/main` before release validation. Leave other agents’ worktrees and branches intact.
+
+## Email subscriptions
+
+Subscriber emails must be ad-free. Do not enable advertising, sponsorships, or an ad-supported delivery tier. Only display email signup after the real newsletter and delivery path are configured and verified; document the provider and any owner-approved recurring cost.
