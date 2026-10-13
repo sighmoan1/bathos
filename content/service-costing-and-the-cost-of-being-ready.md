@@ -42,7 +42,7 @@ Cases also aren't interchangeable. A simple enquiry and a prolonged, complicated
 
 Social return on investment tries to connect expenditure to benefits that ordinary financial accounts miss. That is a worthwhile ambition. Asking who benefits, which outcomes matter and what would have happened without the service can improve a decision.
 
-I get wary when that reasoning disappears behind a headline saying that each pound spent creates so many pounds of social value.
+SROI's own [guidance on avoiding overclaiming](https://www.socialvalueint.org/principle-5-do-not-overclaim) already asks analysts to account for what would have happened anyway and the contribution of others. I get wary when that reasoning disappears behind a headline saying that each pound spent creates so many pounds of social value, particularly when the headline travels into a portfolio comparison.
 
 An outcome can depend on the service, other organisations, a person's own efforts and wider conditions. What would have happened anyway? How much contribution belongs to each participant? How long does a benefit last? Which monetary proxy represents something that doesn't have a market price? Different defensible assumptions can produce different ratios.
 
