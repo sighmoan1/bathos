@@ -10,6 +10,7 @@ import { postPath } from "@/lib/post-links"
 import { ReplyContext } from "./reply-context"
 
 import { ShareButton } from "./share-button"
+import { WebmentionAdoptionLink } from "./webmention-adoption-link"
 
 interface ArticleReaderProps {
   article: Article
@@ -97,6 +98,7 @@ export function ArticleReader({ article, onClose, onSave, onDismiss, onTagClick,
         <div className="e-content article-prose">
           <ReactMarkdown>{article.content}</ReactMarkdown>
         </div>
+        <WebmentionAdoptionLink targetUrl={`https://bathos.org${postPath(article.slug)}`} />
       </article>
     </motion.div>
   )
