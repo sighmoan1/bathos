@@ -96,3 +96,25 @@
   .pm-draft-buttons { width: 100%; }
   .pm-draft-buttons > button:first-child { flex: 1; }
 }
+
+.pm-warnings ul { padding-left: 20px; line-height: 1.7; overflow-wrap: anywhere; }
+.pm-warnings a { text-decoration: underline; }
+@media (max-width: 600px) {
+  .pm-shell, .pm-header { padding-left: 14px; padding-right: 14px; }
+  .pm-is-editing .pm-masthead { margin-bottom: 16px; }
+  .pm-is-editing .pm-masthead h1 { font-size: 28px; margin-top: 8px; }
+  .pm-is-editing .pm-masthead p, .pm-is-editing .pm-eyebrow { display: none; }
+  .pm-editor label { margin-bottom: 16px; }
+  .pm-login .pm-button, .pm-login button { width: 100%; margin: 4px 0; }
+  .pm-writing-head { position: sticky; top: 0; z-index: 2; background: var(--pm-paper); padding: 8px 0; }
+  .pm-body { min-height: 55dvh; }
+  .pm-actions { position: fixed; left: 0; right: 0; bottom: var(--pm-keyboard-inset, 0px); margin: 0; padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); box-shadow: 0 -4px 20px rgb(0 0 0 / 5%); }
+  .pm-is-editing { padding-bottom: calc(90px + env(safe-area-inset-bottom)); }
+  .pm-banner, .pm-error, .pm-panel { overflow-wrap: anywhere; min-width: 0; }
+}
+@media (max-width: 360px) {
+  .pm-list-tools { flex-wrap: wrap; }
+  .pm-list-tools .pm-search { flex-basis: 100%; }
+  .pm-list-tools .pm-primary { width: 100%; }
+  .pm-writing-head { flex-wrap: wrap; }
+}

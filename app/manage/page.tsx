@@ -6,6 +6,7 @@ import { ArrowLeft, Check, Download, Feather, Plus, Search, Trash2, WifiOff } fr
 import "./manage.css"
 
 type Post = { slug: string; title: string; description: string; date: string; tags: string[]; body: string; sha?: string }
+type PostWarning = { slug: string; message: string }
 type Draft = { post: Post; savedAt: string }
 type DeviceDraft = Draft & { key: string }
 type InstallPrompt = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> }
@@ -32,6 +33,7 @@ export default function ManagePosts() {
   const [session, setSession] = useState<"loading" | "in" | "out">("loading")
   const [login, setLogin] = useState("")
   const [posts, setPosts] = useState<Post[]>([])
+  const [warnings, setWarnings] = useState<PostWarning[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [storageError, setStorageError] = useState("")
@@ -83,9 +85,9 @@ export default function ManagePosts() {
   const loadPosts = useCallback(async () => {
     setLoading(true); setError("")
     try {
-      const result = await api<{ posts: Post[]; warnings?: { slug: string; message: string }[] }>("/api/posts")
+      const result = await api<{ posts: Post[]; warnings?: PostWarning[] }>("/api/posts")
       setPosts(result.posts)
-      if (result.warnings?.length) setError("Some posts could not be read. Your other posts are available; retry to check again.")
+      setWarnings(result.warnings || [])
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) setSession("out")
       setError(e instanceof Error ? e.message : "Could not load your posts.")
@@ -107,6 +109,12 @@ export default function ManagePosts() {
   }, [loadPosts])
 
   useEffect(() => { void checkSession() }, [checkSession])
+  useEffect(() => {
+    const viewport = window.visualViewport
+    const sync = () => document.documentElement.style.setProperty("--pm-keyboard-inset", `${Math.max(0, window.innerHeight - (viewport?.height || window.innerHeight) - (viewport?.offsetTop || 0))}px`)
+    sync(); viewport?.addEventListener("resize", sync); viewport?.addEventListener("scroll", sync)
+    return () => { viewport?.removeEventListener("resize", sync); viewport?.removeEventListener("scroll", sync); document.documentElement.style.removeProperty("--pm-keyboard-inset") }
+  }, [])
   useEffect(() => { loadDrafts() }, [loadDrafts])
   useEffect(() => {
     const sync = () => setOnline(navigator.onLine)
@@ -207,7 +215,7 @@ export default function ManagePosts() {
   async function save() {
     if (!post || busy || !online || session !== "in" || conflict) return
     const value = { ...post, slug: post.slug || slugify(post.title), tags: [...new Set(post.tags.map(tag => tag.trim()).filter(Boolean))] }
-    if (!value.title.trim() || !value.body.trim() || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value.slug) || !value.date) { setError("Add a title, a date, some writing, and a URL name using letters, numbers and hyphens."); return }
+    if (!value.title.trim() || !value.body.trim() || !(value.sha ? /^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$/ : /^[a-z0-9]+(?:-[a-z0-9]+)*$/).test(value.slug) || !value.date) { setError("Add a title, a date, some writing, and a URL name using letters, numbers and hyphens."); return }
     setBusy(true); setError(""); setPost(value); keepDraft(value, draftSlug)
     try {
       const result = await api<{ post: Post; commitSha: string }>(value.sha ? `/api/posts/${encodeURIComponent(value.slug)}` : "/api/posts", { method: value.sha ? "PUT" : "POST", body: JSON.stringify(value) })
@@ -235,9 +243,9 @@ export default function ManagePosts() {
       setRecovery({ post, savedAt: new Date().toISOString() }); setPost(current); setOriginal(JSON.stringify(current)); setConflict(false); setError(""); setNotice("Loaded the current post. Your earlier writing is kept as a device draft.")
     } catch (e) { handleError(e) } finally { setBusy(false) }
   }
-  const visiblePosts = posts.filter(p => `${p.title} ${p.description} ${p.tags?.join(" ")}`.toLowerCase().includes(query.toLowerCase()))
+  const visiblePosts = posts.filter(p => `${p.slug} ${p.title} ${p.description} ${p.tags?.join(" ")}`.toLowerCase().includes(query.toLowerCase()))
 
-  return <main className="post-manager">
+  return <main className={`post-manager${post ? " pm-is-editing" : ""}`}>
     <header className="pm-header"><a href="/" onClick={e => { if (busy || (dirty && !window.confirm("Leave the editor? Your writing will stay as a draft on this device."))) e.preventDefault(); else if (post && dirty && !keepDraft(post, draftSlug)) e.preventDefault() }}><ArrowLeft size={18} /> Bathos</a><button className="pm-quiet" onClick={() => setInstallHelp(!installHelp)}><Download size={17} /> Install</button></header>
     <div className="pm-shell">
       <div className="pm-masthead"><span className="pm-eyebrow"><Feather size={16} /> YOUR WRITING ROOM</span><h1>{post ? post.sha ? "Edit your post" : "A new thought" : "Manage posts"}</h1><p>{post ? "A little space to put your words in order." : "Write, polish and publish, wherever you are."}</p></div>
@@ -246,6 +254,7 @@ export default function ManagePosts() {
       {!online && <div className="pm-banner"><WifiOff size={17} /><span>You’re offline. You can write a device draft; reconnect to save to the site.</span></div>}
       {storageError && <div role="alert" className="pm-error">{storageError}</div>}
       {error && <div role="alert" className="pm-error">{error}{conflict && <button onClick={reloadConflict} disabled={busy}>Load current post & keep my draft</button>}</div>}
+      {!post && warnings.length > 0 && <section className="pm-panel pm-warnings" aria-label="Posts needing attention"><h2>Posts needing attention</h2><p>These files are still in GitHub. Your other posts are available.</p><ul>{warnings.map(warning => <li key={warning.slug}><a href={`https://github.com/sighmoan1/bathos/blob/main/content/${encodeURIComponent(warning.slug)}.md`} target="_blank" rel="noopener noreferrer">{warning.slug}.md</a>: {warning.message}</li>)}</ul></section>}
       {deployment && <div role="status" className="pm-banner pm-publishing"><Check size={17} /><span>{deployment.text}</span></div>}
       {session === "loading" && <p role="status" className="pm-loading">Checking sign-in…</p>}
       {session === "out" && <section className="pm-panel pm-login"><h2>Your posts, in your pocket.</h2><p>Sign in with GitHub to manage your Bathos posts. You can also start writing a draft now.</p><a className="pm-primary pm-button" href="/api/login" onClick={e => { if (post && dirty && !keepDraft(post, draftSlug)) e.preventDefault() }}>Sign in with GitHub</a><button className="pm-quiet" onClick={() => void checkSession()} disabled={!online}>Check sign-in again</button>{!post && <button onClick={() => enter(emptyPost())}>Write a device draft</button>}</section>}
@@ -265,7 +274,7 @@ export default function ManagePosts() {
       </section> : <>
         {deviceDrafts.length > 0 && <section className="pm-device-drafts" aria-label="Device drafts"><h2>Device drafts</h2><p className="pm-small">Writing kept on this device. Continue online or offline; nothing publishes until you save to the site.</p>{deviceDrafts.map(draft => <div className="pm-device-draft" key={draft.key}><div><h3>{draft.post.title || "Untitled post"}</h3><span className="pm-small">{draft.savedAt && !Number.isNaN(Date.parse(draft.savedAt)) ? `Saved ${new Date(draft.savedAt).toLocaleString()}` : "Saved on this device"}</span></div><div className="pm-draft-buttons"><button aria-label={`Continue draft ${draft.post.title || "Untitled post"}`} onClick={() => continueDraft(draft)}>Continue draft</button><button className="pm-quiet" aria-label={`Discard draft ${draft.post.title || "Untitled post"}`} onClick={() => discardDraft(draft)}>Discard</button></div></div>)}</section>}
         <div className="pm-list-tools"><label className="pm-search"><Search size={18} /><span className="pm-sr-only">Search posts</span><input type="search" placeholder="Search your posts" value={query} onChange={e => setQuery(e.target.value)} /></label><button className="pm-primary" onClick={() => enter(emptyPost())} disabled={busy}><Plus size={19} /> New post</button></div>
-        {session === "in" && <div className="pm-list-meta"><span>{posts.length} {posts.length === 1 ? "post" : "posts"} · {login}</span><button className="pm-quiet" disabled={loading || !online} onClick={loadPosts}>Refresh posts</button><button className="pm-quiet" disabled={busy || !online} onClick={async () => { setBusy(true); try { await api("/api/logout", { method: "POST", body: "{}" }); setSession("out"); setPosts([]) } catch (e) { handleError(e) } finally { setBusy(false) } }}>Sign out</button></div>}
+        {session === "in" && <div className="pm-list-meta"><span>{posts.length} {posts.length === 1 ? "post" : "posts"} · {login}</span><button className="pm-quiet" disabled={loading || !online} onClick={loadPosts}>Refresh posts</button><button className="pm-quiet" disabled={busy || !online} onClick={async () => { setBusy(true); try { await api("/api/logout", { method: "POST", body: "{}" }); setSession("out"); setPosts([]); setWarnings([]) } catch (e) { handleError(e) } finally { setBusy(false) } }}>Sign out</button></div>}
         {loading ? <p role="status" className="pm-loading">Loading your posts…</p> : session === "in" && <div className="pm-posts">{visiblePosts.length ? visiblePosts.map(item => <button className="pm-post" key={item.slug} disabled={busy || !online} onClick={() => void openPost(item.slug)}><span className="pm-post-date">{item.date?.slice(0, 10)}</span><h2>{item.title}</h2><p>{item.description}</p><span className="pm-post-tags">{item.tags?.filter(Boolean).join(" · ")}</span><span className="pm-edit-label">Edit post ↗</span></button>) : <section className="pm-panel"><h2>{query ? "No posts match that search." : "Your next post starts here."}</h2><p>{query ? "Try another title or tag." : "Tap New post to start writing."}</p></section>}</div>}
         {error && session === "in" && <button disabled={loading || !online} onClick={loadPosts}>Retry loading posts</button>}
       </>}
