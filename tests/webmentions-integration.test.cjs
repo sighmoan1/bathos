@@ -30,12 +30,12 @@ function load(file, mocks = {}) {
 function renderedReply(title = 'Integration reply') {
   const { ArticleReader } = load('components/article-reader.tsx',{
     'react-markdown':({children})=>React.createElement('p',null,children),
-    'framer-motion':{motion:{div:({initial,animate,exit,...props})=>React.createElement('div',props)}},
-    '@/lib/use-feed-controls':{useEscapeKey:()=>{}},
+    'framer-motion':{useReducedMotion:()=>false,motion:{div:({initial,animate,exit,...props})=>React.createElement('div',props)}},
+    '@/lib/use-reader-dialog':{useReaderDialog:()=>({ref:null,titleId:'fixture-title',present:true})},
     './share-button':{ShareButton:()=>null},
     './webmention-responses':{WebmentionResponses:()=>null},
   });
-  const article={slug:'integration-reply',title,content:'A published fixture reply.',inReplyTo:[target]};
+  const article={slug:'integration-reply',title,content:'A published fixture reply.',inReplyTo:[`${target}#discussion`]};
   const markup=renderToStaticMarkup(React.createElement(ArticleReader,{article,animateEntry:false,onClose(){},onSave(){},onDismiss(){},onTagClick(){}}));
   return `<!doctype html><title>${title}</title><link rel="canonical" href="${source}">${markup}`;
 }
@@ -75,10 +75,11 @@ test('real rendered reply → sender → Worker/D1 → reviewed approval → cha
   const app=await fixture(t);const {sendWebmention,links}=await import('../scripts/send-webmentions.mjs');
   const emitted=links(app.remote.body,source);
   assert.equal(emitted.filter(link=>link.classes.includes('u-in-reply-to')).length,1);
-  assert.equal(emitted.find(link=>link.classes.includes('u-in-reply-to')).url,target);
+  const replyTarget=emitted.find(link=>link.classes.includes('u-in-reply-to')).url;
+  assert.equal(replyTarget,`${target}#discussion`);
   assert.equal(emitted.find(link=>link.classes.includes('u-url')).url,source);
   assert.match(app.remote.body,/class="h-entry /);
-  const delivery=await sendWebmention({source,target,transport:app.transport});assert.equal(delivery.status,'accepted');assert.equal(delivery.httpStatus,202);
+  const delivery=await sendWebmention({source,target:replyTarget,transport:app.transport});assert.equal(delivery.status,'accepted');assert.equal(delivery.httpStatus,202);
   assert.deepEqual(await app.publicResponses(),{responses:[]});
   const original=await app.reviewed();assert.equal(original.state,'pending');assert.equal(original.source,source);
   assert.equal((await app.approve(original.fingerprint,'incorrect')).status,401);
@@ -103,14 +104,32 @@ test('real rendered reply → sender → Worker/D1 → reviewed approval → cha
 });
 test('cross-layer parser/abuse boundaries reject fake backlinks and invalid source URLs',async t=>{
   const app=await fixture(t);const {sendWebmention}=await import('../scripts/send-webmentions.mjs');
-  app.remote.body=`<!-- <a href="${target}"> --><script>const fake='<a href="${target}">';</script><template><a href="${target}"></a></template>`;
-  await assert.rejects(sendWebmention({source,target,transport:app.transport}),/does not link/);
-  const received=await app.request('/api/webmention',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({source,target}).toString()});
-  assert.equal(received.status,200);assert.deepEqual(await app.publicResponses(),{responses:[]});
-  assert.equal((await app.db.prepare('SELECT COUNT(*) n FROM mentions').first()).n,0);
+  for(const html of [
+    `<!-- <a href="${target}"> -->`,
+    `<script>const fake='<a href="${target}">';</script>`,
+    `<template><a href="${target}"></a></template>`,
+    `<textarea><a href="${target}">raw text</a></textarea>`,
+    `<div data-note="&quot;><a href='${target}'>fake</a>">Encoded attribute delimiter</div>`,
+  ]) {
+    app.remote.body=html;
+    await assert.rejects(sendWebmention({source,target,transport:app.transport}),/does not link/);
+    const received=await app.request('/api/webmention',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({source,target}).toString()});
+    assert.equal(received.status,200);assert.deepEqual(await app.publicResponses(),{responses:[]});
+    assert.equal((await app.db.prepare('SELECT COUNT(*) n FROM mentions').first()).n,0);
+  }
   for(const unsafe of ['http://127.0.0.1/','https://user:secret@bathos.org/posts/x/','javascript:alert(1)']){
     await assert.rejects(sendWebmention({source:unsafe,target,transport:app.transport}));
     const response=await app.request('/api/webmention',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({source:unsafe,target}).toString()});assert.equal(response.status,400);
   }
   assert.equal((await app.request('/api/webmention/admin')).status,401);
+});
+
+test('approval rechecks removed backlink and retracts pending record immediately',async t=>{
+  const app=await fixture(t);const {sendWebmention}=await import('../scripts/send-webmentions.mjs');
+  await sendWebmention({source,target,transport:app.transport});
+  const reviewed=await app.reviewed();assert.equal(reviewed.state,'pending');
+  app.remote.body='<title>Withdrawn before approval</title><p>No backlink remains.</p>';
+  const approval=await app.approve(reviewed.fingerprint);assert.equal(approval.status,422);
+  assert.deepEqual(await app.publicResponses(),{responses:[]});
+  assert.equal((await app.db.prepare('SELECT COUNT(*) n FROM mentions').first()).n,0);
 });
