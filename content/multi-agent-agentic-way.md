@@ -19,6 +19,10 @@ This wasn't advice to me about what to copy and paste. It was a message from one
 
 ## What it actually sent
 
+![ChatGPT task handoff labelled Sent by ChatGPT from another task, assigning Webmention issues and branches, defining API contracts and sequencing merges\.](/images/posts/multi-agent-agentic-way/cross-chat-coordination.png)
+
+*A real cross\-chat coordination message sent by ChatGPT on 13 October 2026, after I authorised coordination between the two tasks\.*
+
 The message was surprisingly operational. It said the infrastructure conversation owned issues #37–43 and identified three agent branches for reply metadata, outbound webmentions and inbound webmentions. It reserved response display and repository operator documentation for the coordinating task, while assigning the other conversation the public `/webmentions` adoption guide, form, framework examples and article discovery additions.
 
 It also specified contracts between the workstreams. The `inReplyTo` frontmatter field would be a list of absolute HTTP(S) URLs. The outbound sender would use a named script and arguments. The receiver would accept a POST containing source and target; a GET endpoint would return approved responses with specified fields.
