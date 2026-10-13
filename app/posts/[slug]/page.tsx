@@ -31,5 +31,17 @@ export default async function Post({ params }: Props) {
   const articles = getAllArticles()
   const article = articles.find((post) => post.slug === slug)
   if (!article) notFound()
-  return <SwipeFeed initialArticles={articles} allTags={getAllTags(articles)} initialReadingArticle={article} />
+  return (
+    <>
+      <noscript>
+        <style>{`[data-swipe-reader] { display: none !important; }`}</style>
+        <main className="mx-auto max-w-3xl p-6">
+          <h1 className="text-3xl font-bold">{article.title}</h1>
+          <p className="mt-4"><a className="text-accent underline" href={`/read/${encodeURIComponent(article.slug)}/`}>Read this article without JavaScript</a></p>
+          <p className="mt-4"><a className="text-accent underline" href="/articles/">Browse all articles</a></p>
+        </main>
+      </noscript>
+      <div data-swipe-reader className="contents"><SwipeFeed initialArticles={articles} allTags={getAllTags(articles)} initialReadingArticle={article} /></div>
+    </>
+  )
 }
