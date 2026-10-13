@@ -35,7 +35,7 @@ function renderedReply(title = 'Integration reply') {
     './share-button':{ShareButton:()=>null},
     './webmention-responses':{WebmentionResponses:()=>null},
   });
-  const article={slug:'integration-reply',title,content:'A published fixture reply.',inReplyTo:[target]};
+  const article={slug:'integration-reply',title,content:'A published fixture reply.',inReplyTo:[`${target}#discussion`]};
   const markup=renderToStaticMarkup(React.createElement(ArticleReader,{article,animateEntry:false,onClose(){},onSave(){},onDismiss(){},onTagClick(){}}));
   return `<!doctype html><title>${title}</title><link rel="canonical" href="${source}">${markup}`;
 }
@@ -75,10 +75,11 @@ test('real rendered reply → sender → Worker/D1 → reviewed approval → cha
   const app=await fixture(t);const {sendWebmention,links}=await import('../scripts/send-webmentions.mjs');
   const emitted=links(app.remote.body,source);
   assert.equal(emitted.filter(link=>link.classes.includes('u-in-reply-to')).length,1);
-  assert.equal(emitted.find(link=>link.classes.includes('u-in-reply-to')).url,target);
+  const replyTarget=emitted.find(link=>link.classes.includes('u-in-reply-to')).url;
+  assert.equal(replyTarget,`${target}#discussion`);
   assert.equal(emitted.find(link=>link.classes.includes('u-url')).url,source);
   assert.match(app.remote.body,/class="h-entry /);
-  const delivery=await sendWebmention({source,target,transport:app.transport});assert.equal(delivery.status,'accepted');assert.equal(delivery.httpStatus,202);
+  const delivery=await sendWebmention({source,target:replyTarget,transport:app.transport});assert.equal(delivery.status,'accepted');assert.equal(delivery.httpStatus,202);
   assert.deepEqual(await app.publicResponses(),{responses:[]});
   const original=await app.reviewed();assert.equal(original.state,'pending');assert.equal(original.source,source);
   assert.equal((await app.approve(original.fingerprint,'incorrect')).status,401);
