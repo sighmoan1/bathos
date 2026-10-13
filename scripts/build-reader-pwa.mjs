@@ -5,7 +5,16 @@ import { createHash } from "node:crypto";
 const root = path.resolve("out");
 const html = await fs.readFile(path.join(root, "index.html"), "utf8");
 const assets = new Set(["/", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png", "/icons/apple-icon.png"]);
-for (const match of html.matchAll(/(?:src|href)="([^"?#]+)[^"]*"/g)) {
+const postDirectories = await fs.readdir(path.join(root, "posts"), { withFileTypes: true }).catch(error => {
+  if (error.code === "ENOENT") return [];
+  throw error;
+});
+const pages = [html];
+for (const directory of postDirectories.filter(entry => entry.isDirectory())) {
+  assets.add(`/posts/${encodeURIComponent(directory.name)}/`);
+  pages.push(await fs.readFile(path.join(root, "posts", directory.name, "index.html"), "utf8"));
+}
+for (const match of pages.join("\n").matchAll(/(?:src|href)="([^"?#]+)[^"]*"/g)) {
   if (match[1].startsWith("/_next/static/")) assets.add(match[1].replaceAll("&amp;", "&"));
 }
 for (const asset of [...assets].filter(asset => asset.endsWith(".css"))) {
@@ -18,7 +27,7 @@ for (const asset of [...assets].filter(asset => asset.endsWith(".css"))) {
 const template = await fs.readFile("public/sw.js", "utf8");
 const digest = createHash("sha256").update(template).update(html);
 for (const asset of [...assets].sort()) {
-  if (asset !== "/") digest.update(await fs.readFile(path.join(root, asset)));
+  if (asset !== "/") digest.update(await fs.readFile(path.join(root, asset.endsWith("/") ? decodeURIComponent(asset) + "index.html" : asset)));
 }
 const sw = template.replace(/const CACHE_NAME = .*?;/, `const CACHE_NAME = "bathos-reader-${digest.digest("hex").slice(0, 16)}";`)
   .replace(/const PRECACHE = .*?;/, `const PRECACHE = ${JSON.stringify([...assets].sort())};`);

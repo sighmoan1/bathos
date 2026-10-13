@@ -13,6 +13,7 @@ import {
   X,
 } from "lucide-react"
 import type { Article, TagCount } from "@/lib/articles"
+import { postPath } from "@/lib/post-links"
 import { ArticleCard } from "./article-card"
 import { ArticleReader } from "./article-reader"
 import { ArticleListPanel } from "./article-list-panel"
@@ -24,23 +25,45 @@ import { useFeedKeyboard, useFeedWheel } from "@/lib/use-feed-controls"
 interface SwipeFeedProps {
   initialArticles: Article[]
   allTags: TagCount[]
+  initialReadingArticle?: Article
 }
 
 const DISMISSED_KEY = "swipe-reader-dismissed"
 const SAVED_KEY = "swipe-reader-saved"
 const TAGS_KEY = "swipe-reader-tags"
 
-export function SwipeFeed({ initialArticles, allTags }: SwipeFeedProps) {
+export function SwipeFeed({ initialArticles, allTags, initialReadingArticle }: SwipeFeedProps) {
   useMobileLayout()
   const [dismissed, setDismissed] = useState<string[]>([])
   const [saved, setSaved] = useState<string[]>([])
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [currentSlug, setCurrentSlug] = useState<string | null>(null)
-  const [readingArticle, setReadingArticle] = useState<Article | null>(null)
+  const [readingArticle, setReadingArticle] = useState<Article | null>(initialReadingArticle ?? null)
   const [showSaved, setShowSaved] = useState(false)
   const [showTrash, setShowTrash] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
+
+  const openArticle = useCallback((article: Article) => {
+    window.history.pushState(null, "", postPath(article.slug))
+    setReadingArticle(article)
+  }, [])
+
+  const closeArticle = useCallback(() => {
+    window.history.pushState(null, "", "/")
+    setReadingArticle(null)
+  }, [])
+
+  useEffect(() => {
+    const syncLocation = () => {
+      const article = initialArticles.find((post) => postPath(post.slug) === window.location.pathname)
+      setReadingArticle(article ?? null)
+      setShowSaved(false)
+      setShowTrash(false)
+    }
+    window.addEventListener("popstate", syncLocation)
+    return () => window.removeEventListener("popstate", syncLocation)
+  }, [initialArticles])
 
   // Load preferences from localStorage
   useEffect(() => {
@@ -152,25 +175,23 @@ export function SwipeFeed({ initialArticles, allTags }: SwipeFeedProps) {
   }, [currentArticle, saved, step])
 
   const handleReadMore = useCallback(() => {
-    if (currentArticle) setReadingArticle(currentArticle)
-  }, [currentArticle])
+    if (currentArticle) openArticle(currentArticle)
+  }, [currentArticle, openArticle])
 
-  const handleReaderClose = useCallback(() => {
-    setReadingArticle(null)
-  }, [])
+  const handleReaderClose = closeArticle
 
   const handleReaderSave = useCallback(() => {
     if (readingArticle && !saved.includes(readingArticle.slug)) {
       setSaved((prev) => [...prev, readingArticle.slug])
     }
-    setReadingArticle(null)
+    closeArticle()
     step(1)
-  }, [readingArticle, saved, step])
+  }, [readingArticle, saved, step, closeArticle])
 
   const handleReaderDismiss = useCallback(() => {
     if (readingArticle) dismiss(readingArticle.slug)
-    setReadingArticle(null)
-  }, [readingArticle, dismiss])
+    closeArticle()
+  }, [readingArticle, dismiss, closeArticle])
 
   const handleRestoreAll = useCallback(() => {
     setDismissed([])
@@ -184,9 +205,9 @@ export function SwipeFeed({ initialArticles, allTags }: SwipeFeedProps) {
   const handleTagClickFromReader = useCallback(
     (tag: string) => {
       handleToggleTag(tag)
-      setReadingArticle(null)
+      closeArticle()
     },
-    [handleToggleTag],
+    [handleToggleTag, closeArticle],
   )
 
   const handleClearTags = useCallback(() => setSelectedTags([]), [])
@@ -222,7 +243,7 @@ export function SwipeFeed({ initialArticles, allTags }: SwipeFeedProps) {
     }
   }, [overlayOpen])
 
-  if (!isLoaded) {
+  if (!isLoaded && !readingArticle) {
     return (
       <div className="min-h-dvh flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
@@ -448,7 +469,7 @@ export function SwipeFeed({ initialArticles, allTags }: SwipeFeedProps) {
             emptyHint="Swipe right (or press →) on articles to save them for later"
             onClose={() => setShowSaved(false)}
             onSelect={(article) => {
-              setReadingArticle(article)
+              openArticle(article)
               setShowSaved(false)
             }}
             rowAction={{
@@ -471,7 +492,7 @@ export function SwipeFeed({ initialArticles, allTags }: SwipeFeedProps) {
             emptyHint="Swipe left (or press ←) to hide articles on this device"
             onClose={() => setShowTrash(false)}
             onSelect={(article) => {
-              setReadingArticle(article)
+              openArticle(article)
               setShowTrash(false)
             }}
             rowAction={{
