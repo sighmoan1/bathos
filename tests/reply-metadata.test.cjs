@@ -54,8 +54,8 @@ test('both article loaders carry reply metadata and reject invalid frontmatter',
 test('initial reader HTML contains one entry, canonical encoded permalink and escaped reply links', () => {
   const { ArticleReader } = load('components/article-reader.tsx', {
     'react-markdown': ({children}) => React.createElement('p', null, children),
-    'framer-motion': {motion: {div: ({initial, animate, exit, ...props}) => React.createElement('div', {...props, style: initial === false ? undefined : {opacity: initial.opacity}})}},
-    '@/lib/use-feed-controls': {useEscapeKey: () => {}},
+    'framer-motion': {useReducedMotion: () => false, motion: {div: ({initial, animate, exit, ...props}) => React.createElement('div', {...props, style: initial === false ? undefined : {opacity: initial.opacity}})}},
+    '@/lib/use-reader-dialog': {useReaderDialog: () => ({ref: null, titleId: 'reply-title', present: true})},
     './share-button': {ShareButton: () => null},
   });
   const target = 'https://example.com/post?title=%3Cscript%3E&next=%22quoted%22';
@@ -74,4 +74,25 @@ test('initial reader HTML contains one entry, canonical encoded permalink and es
 test('ordinary articles render no empty reply context', () => {
   const { ReplyContext } = load('components/reply-context.tsx');
   assert.equal(renderToStaticMarkup(React.createElement(ReplyContext, {})), '');
+});
+
+
+test('conventional server-rendered article and canonical no-JS fallback contain reply links', async () => {
+  const article = {slug: 'reply', title: 'A reply', content: 'Reply body', description: 'Summary', inReplyTo: ['https://example.com/original']};
+  const mocks = {
+    '@/lib/articles': {getAllArticles: () => [article], getAllTags: () => []},
+    'next/navigation': {notFound() { throw Error('missing article'); }},
+    'react-markdown': ({children}) => React.createElement('p', null, children),
+    '../../articles/reading.module.css': {page: 'page', header: 'header', main: 'main'},
+    '@/components/swipe-feed': {SwipeFeed: () => null},
+  };
+  const {default: Read} = load('app/read/[slug]/page.tsx', mocks);
+  const conventional = renderToStaticMarkup(await Read({params: Promise.resolve({slug: 'reply'})}));
+  assert.match(conventional, /class="h-entry"/);
+  assert.match(conventional, /class="p-name"/);
+  assert.match(conventional, /class="u-url" href="https:\/\/bathos.org\/posts\/reply\/"/);
+  assert.equal((conventional.match(/class="u-in-reply-to /g) || []).length, 1);
+  const {default: Post} = load('app/posts/[slug]/page.tsx', mocks);
+  const canonical = renderToStaticMarkup(await Post({params: Promise.resolve({slug: 'reply'})}));
+  assert.match(canonical, /<noscript>[\s\S]*class="u-in-reply-to [^"]*" href="https:\/\/example.com\/original"[\s\S]*<\/noscript>/);
 });
