@@ -6,22 +6,27 @@ import ReactMarkdown from "react-markdown"
 import { motion } from "framer-motion"
 import { useEscapeKey } from "@/lib/use-feed-controls"
 
+import { postPath } from "@/lib/post-links"
+import { ReplyContext } from "./reply-context"
+import { WebmentionResponses } from "./webmention-responses"
+
 import { ShareButton } from "./share-button"
 
 interface ArticleReaderProps {
   article: Article
+  animateEntry?: boolean
   onClose: () => void
   onSave: () => void
   onDismiss: () => void
   onTagClick: (tag: string) => void
 }
 
-export function ArticleReader({ article, onClose, onSave, onDismiss, onTagClick }: ArticleReaderProps) {
+export function ArticleReader({ article, onClose, onSave, onDismiss, onTagClick, animateEntry = true }: ArticleReaderProps) {
   useEscapeKey(true, onClose)
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 50 }}
+      initial={animateEntry ? { opacity: 0, y: 50 } : false}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 50 }}
       className="fixed inset-0 bg-background z-50 overflow-y-auto overscroll-contain"
@@ -57,7 +62,7 @@ export function ArticleReader({ article, onClose, onSave, onDismiss, onTagClick 
       </div>
 
       {/* Content */}
-      <article className="max-w-3xl mx-auto px-4 py-8 pb-[calc(5rem+env(safe-area-inset-bottom))]">
+      <article className="h-entry max-w-3xl mx-auto px-4 py-8 pb-[calc(5rem+env(safe-area-inset-bottom))]">
         {/* Tags */}
         {article.tags && article.tags.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-6">
@@ -75,7 +80,10 @@ export function ArticleReader({ article, onClose, onSave, onDismiss, onTagClick 
           </div>
         )}
 
-        <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-4 leading-tight">{article.title}</h1>
+        <h1 className="p-name text-3xl md:text-4xl font-bold text-foreground mb-4 leading-tight">{article.title}</h1>
+
+        <a className="u-url inline-block mb-4 text-sm underline text-muted-foreground" href={`https://bathos.org${postPath(article.slug)}`}>Permalink</a>
+        <ReplyContext inReplyTo={article.inReplyTo} />
 
         {article.date && (
           <p className="text-muted-foreground mb-8">
@@ -87,9 +95,10 @@ export function ArticleReader({ article, onClose, onSave, onDismiss, onTagClick 
           </p>
         )}
 
-        <div className="article-prose">
+        <div className="e-content article-prose">
           <ReactMarkdown>{article.content}</ReactMarkdown>
         </div>
+        <WebmentionResponses target={`https://bathos.org${postPath(article.slug)}`} />
       </article>
     </motion.div>
   )
