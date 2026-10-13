@@ -45,7 +45,8 @@ export function WebmentionSubmit({ endpoint }: { endpoint: string | null }) {
 
   if (!endpoint) return <p className="webmention-notice" role="status">URL submission is currently unavailable because a Webmention receiver has not been configured. You can still publish a reply linking to the Bathos article. Return here when submission is available.</p>
 
-  return <form onSubmit={submit} aria-busy={pending} aria-describedby="submission-explanation">
+  return <form action={endpoint} method="post" encType="application/x-www-form-urlencoded" onSubmit={submit} aria-busy={pending} aria-describedby="submission-explanation">
+    <noscript><p>You can submit this form without JavaScript. Your browser will show the receiver’s response. Acceptance does not confirm verification or display of your reply.</p></noscript>
     <p id="submission-explanation">Submit only a reply you are authorised to publish. Its public page must contain a link to the Bathos article. The receiver checks that link and may moderate submissions before displaying them.</p>
     <label htmlFor="webmention-source">Your published reply URL</label>
     <input id="webmention-source" name="source" type="url" required maxLength={2048} placeholder="https://your-site.example/my-reply/" autoComplete="url" />
