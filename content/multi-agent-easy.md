@@ -33,7 +33,7 @@ The easiest way I have found is:
 
 * Tell a faster and cheaper model to create subagents and get them to complete the Github Issues and make sure they follow agents.md.
 
-I know little about code quality so on my projects I will often tell the agents to merge their own code. Sometimes, there are merge conflicts. When this happens, I will get the powerful agent back again and tell it to sort out the merge conflicts. 
+I know little about code quality, and until recently I would often tell the agents to merge their own code. Sometimes, there are merge conflicts. When this happens, I will get the powerful agent back again and tell it to sort out the merge conflicts. 
 
 This approach has not failed me so far. I'm not doing especially complicated things and it's only me working on these projects. But it seems fine for getting sites with auth and databases up and running. 
 
@@ -45,7 +45,7 @@ The things I think you should be asking your agent to write into your projects' 
 
 * Check what everyone else is doing before starting work. Look at the open issues and pull requests and don't start work someone else is already doing.
 * Use GitHub issues to track work. Every task should have an issue describing what needs doing and how we'll know it's done.
-* Claim your work. Label an issue as in progress before starting it, so other agents know to leave it alone.
+* Claim your work. Leave an agent-identified comment, check that nobody claimed the issue first, then label it as in progress so other agents know to leave it alone.
 * Use a separate branch and worktree for each issue. This lets multiple agents work simultaneously without overwriting each other's changes.
 * Create a pull request for every change. Link it to the issue, run the tests and record what you've done.
 * Keep everyone informed. Update the issue or pull request as you go, particularly when you're blocked or handing work to another agent. Close issues when you have merged the related PR.
@@ -55,7 +55,7 @@ The things I think you should be asking your agent to write into your projects' 
 * Agent identity: Each agent should use a unique identifier when claiming work, because multiple agents may share the same GitHub account.
 * Claims aren't locks: Two agents could claim an issue simultaneously. They need to check for conflicting claims and coordinate.
 * Worktrees are local: They stop agents overwriting each other's working files, but don't prevent conflicting changes when branches merge.
-* Automated checks: Where practical, establish a test command and have GitHub Actions run it on each PR. That gives agents something objective to check before merging.
+* Automated checks: Establish a test command and have GitHub Actions run the relevant checks on every PR. Require them to pass before merging.
 
 The important things are :
 
@@ -70,78 +70,107 @@ You might find that your agent app doesn't have the capability to init a project
 
 I also have ideas on how to setup projects with infrastructure that's easy to work with using agents. That will be a [separate post](https://bathos.org/posts/architecture-the-easy-way).
 
-## Footgun review
+## Footguns
 
 I asked Sol to look for footguns in this approach and suggest defences. Here's what it came up with.
 
-**Agents reviewing and merging their own work.** An agent can confidently approve code that doesn't work. Have a different agent review each PR, and require automated checks to pass before merging.
+**Agents reviewing and merging their own work.** An agent can confidently approve code that doesn't work. Have a different agent review each PR, and require automated checks to pass before merging. If all your agents use the same GitHub account, the reviewing agent will need to leave a comment rather than formally approve the PR. GitHub won't let you approve your own PR, even if a different model did the reviewing. CI can be enforced through branch protection; independent agent review needs a separate mechanism if you want to enforce it automatically.
 
-**Tests are optional.** If you don't know much about software engineering, automated tests are more important, not less. Set up CI to run tests, linting and type checks on every PR. Don't let agents merge failing code.
+**Tests are optional.** If you don't know much about software engineering, automated tests are more important, not less. Set up GitHub Actions to run tests, linting and type checks as appropriate on every PR. Make passing checks a requirement for merging. Agents should add tests for the behaviour they change.
 
-**Agents have too much freedom.** An instruction to complete an issue might lead an agent to delete data, change infrastructure or expose secrets. Give agents explicit boundaries. Require human approval for destructive operations, production credentials and anything that costs money.
+**Agents have too much freedom.** An instruction to complete an issue might lead an agent to delete data, change infrastructure or expose secrets. Give agents explicit boundaries. Require human approval for destructive operations, sensitive changes and anything that costs money.
 
-**Worktrees don't isolate everything.** Agents working in separate worktrees can still interfere with each other through shared databases, ports and external services. Give them separate test environments where necessary.
+**Claiming issues isn't atomic.** Two agents can claim the same issue simultaneously. The simplest solution is to have one coordinating agent assign issues. If agents claim work themselves, have them identify themselves in a comment, check for competing claims and let the earliest claim win. This is a convention, not a proper lock, but probably sufficient for a handful of agents.
 
-**A clean merge isn't necessarily working software.** Two changes can work independently and break when combined. Run tests against the latest main branch and check that deployments actually work.
+**Worktrees don't isolate everything.** Agents working in separate worktrees can still interfere with each other through shared databases, ports and external services. They can also make conflicting changes to the same files on different branches. Include a "files likely touched" field in issues, check for overlap before starting and give agents separate test environments where necessary.
 
-**GitHub issue claims aren't atomic.** Two agents might pick up the same issue simultaneously. For a handful of agents, checking existing claims is probably enough. At greater scale, use a dispatcher or proper locking.
+**A clean merge isn't necessarily working software.** Two changes can work independently and break when combined. Require CI against the latest main branch before merging, and check that deployments actually work.
 
-**Agents can declare victory prematurely.** Completing a task isn't the same as achieving the intended outcome. Write acceptance criteria into issues and have another agent verify them.
+**Agents can declare victory prematurely.** Completing a task isn't the same as achieving the intended outcome. Write acceptance criteria into issues and have another agent verify them. Don't close an issue just because the agent says it's finished.
 
-**There's no rollback plan.** Agents can deploy broken software just as quickly as working software. Make deployments reversible and have a way to detect failures.
+**Agents can disappear halfway through a task.** Sessions run out of context, hit usage limits or get interrupted. Require agents to commit and push their work regularly, and leave handover notes explaining what they've done, what remains and what's blocking progress.
+
+**There's no rollback plan.** Agents can deploy broken software just as quickly as working software. Make deployments reversible and have a way to detect failures. Treat destructive database migrations particularly carefully.
 
 **More agents can mean less productivity.** Parallel work creates coordination, review and integration costs. Limit concurrent work and measure working features rather than completed issues.
 
 Most of these can be addressed with a better `AGENTS.md`, GitHub branch protection and a few CI workflows. None requires building Gas Town.
 
-The three I'd prioritise are independent review, mandatory automated checks and explicit limits on what agents can do without asking. The rest can wait until they become problems.
+The three I'd prioritise are independent review, mandatory automated checks and explicit limits on what agents can do without asking.
 
-## What Sol says Agents.md should actually say
-
-```
 ## This is what AGENTS.md should actually say
 
-Taking those footguns seriously, I'd replace the original coordination instructions with something like this:
+Taking those footguns seriously, I asked Sol to produce a better `AGENTS.md`. Opus reviewed it and found that Sol had managed to drop several of the coordination rules I started with. So here's the consolidated version.
+
+You can give this to an agent and ask it to adapt it to your project.
 
 ```markdown
 # Agent instructions
 
 ## Before starting work
 
-1. Read this file and the repository README.
-2. Check open GitHub issues and existing claims.
-3. Claim an issue by commenting on it before starting.
-4. Create a dedicated branch and worktree.
-5. Do not work on files another agent is actively changing without coordinating.
-6. If the issue is ambiguous, ask or propose an approach before implementing it.
+1. Read this file, the README and relevant project documentation.
+2. Check open GitHub issues, PRs and existing worktrees.
+3. Use a unique agent ID when claiming or reporting work.
+4. Only work on approved issues. Issues labelled `suggestion` are proposals, not instructions.
+5. Every issue should have acceptance criteria and a "files likely touched" field.
+6. Check whether your work overlaps with another agent's issue or files.
+7. If a coordinating agent assigns work, follow that assignment.
+8. Otherwise, claim an issue by commenting with your agent ID, then re-read the issue for competing claims. The earliest claim wins; later claimants must stand down. Add the `in-progress` label once the claim is confirmed. This is a coordination convention, not an atomic lock.
+9. Create a branch named `issue-<number>-<description>` and a worktree in `.worktrees/`.
+10. Create a draft PR linked to the issue before making substantial changes.
 
 ## Implementation
 
 1. Work only on the claimed issue. Don't expand scope without approval.
-2. Write or update tests for changed behaviour.
-3. Run tests, linting and type checks before opening a PR.
-4. Never commit secrets, credentials or personal data.
-5. Don't change production infrastructure, authentication, permissions or database schemas without explicit approval.
-6. Use isolated test resources where possible. Don't modify shared services without coordinating.
+2. Update the issue if the files you're changing differ from those anticipated.
+3. Coordinate before modifying files another agent is working on.
+4. Write or update tests for changed behaviour.
+5. Run tests, linting and type checks before requesting review.
+6. Commit and push regularly so work survives session interruptions.
+7. Never commit secrets, credentials or personal data.
+8. Don't change production infrastructure, authentication, permissions or database schemas without explicit approval.
+9. Use isolated test resources where possible. Don't modify shared services without coordinating.
+10. Keep important decisions and progress recorded in GitHub, not only in conversation context.
 
-## Pull requests
+## Pull requests and review
 
-1. Open a PR referencing the issue.
+1. Every change requires a PR referencing its issue.
 2. Explain what changed, how it was tested and any remaining risks.
 3. Request review from an agent other than the implementer.
-4. Reviewers must inspect the changes and run relevant checks, not simply approve.
-5. Fix review findings before merging.
-6. Never merge with failing required checks.
-7. Only merge when independent review and required CI checks have passed.
-8. Check that the combined changes work against the latest main branch.
+4. The reviewing agent must inspect the changes and relevant test evidence, not simply declare approval.
+5. If agents share one GitHub account, the reviewer should leave a review comment recording findings and a clear pass or fail. Do not require GitHub approving reviews from that same account.
+6. Fix review findings before merging.
+7. Never merge with failing required CI checks.
+8. Check that changes work against the latest main branch before merging.
+9. Merge only after independent review has passed and required checks are green. Configure an enforceable review gate if unattended merging is allowed.
+10. Don't bypass branch protection or disable checks to get a PR merged.
 
-## Completion
+## Completion and cleanup
 
 1. Verify the issue's acceptance criteria, not just that the code builds.
 2. Check deployment health where applicable.
 3. Close the issue only when the intended behaviour has been verified.
-4. Record important decisions and unresolved problems in the repository.
-5. Report anything requiring human intervention.
+4. Record important decisions and unresolved problems in GitHub.
+5. After merging, remove the worktree and local branch.
+6. Enable automatic deletion of merged remote branches in GitHub.
+7. Remove the `in-progress` label and report what was completed, tested and not verified.
+
+## If you get stuck
+
+1. Don't silently abandon work.
+2. Push completed work to the remote branch.
+3. Leave a handoff comment explaining what was done, what remains, what was tested and what is blocking progress.
+4. If another agent can continue, identify the branch, worktree and PR.
+5. If abandoning rather than handing over, release the claim and remove the `in-progress` label.
+6. Never delete unmerged work without ensuring it is preserved.
+
+## Suggestions
+
+1. You can suggest improvements beyond your assigned work.
+2. Create GitHub issues labelled `suggestion` explaining the benefit and proposed approach.
+3. Do not implement suggestions until explicitly approved.
+4. Do not treat creating a suggestion as permission to expand your current issue.
 
 ## Stop and ask
 
@@ -164,7 +193,27 @@ Get human approval before:
 - Don't claim a feature works without evidence.
 - Don't confuse completing a task with achieving its intended outcome.
 - If you're uncertain, say so.
+- GitHub is the shared record of work. Don't rely on another agent having access to your conversation.
 ```
+
+There are a few things to configure alongside this file.
+
+**CLAUDE.md.** Claude Code uses its own instructions file, so create a `CLAUDE.md` containing `@AGENTS.md`. This lets Claude use the same instructions as agents that read `AGENTS.md` directly.
+
+**Worktrees.** Add `.worktrees/` to `.gitignore`. Keeping worktrees inside the repository means they remain accessible to agents running in sandboxes that can't write outside the project directory.
+
+**GitHub Actions.** Set up CI appropriate to the project and make passing checks mandatory through branch protection. If you're using one GitHub account for all agents, don't require formal PR approval unless you have another account that can provide it.
+
+**Review enforcement.** Telling agents to get independent review is not the same as enforcing it. With a shared GitHub account, you could use a GitHub Action to check for a structured review result from another agent. Otherwise, review remains a convention that agents can accidentally bypass.
+
+**Branch cleanup.** Enable automatic deletion of merged branches in GitHub. Agents should also remove their local worktrees after merging.
+
+You should still ask your agent to adapt these instructions to the project, including its actual test commands, architecture and security requirements.
+
+And remember that `AGENTS.md` is an instruction file, not a security boundary. Agents can ignore or misinterpret it. Permissions, branch protection and automated checks are what actually prevent some of the more expensive mistakes.
+
+This is quite a lot of instructions, but they're mostly things you set up once. The point is to get the agents to take responsibility for the mechanics of developing software, without requiring you to manage every branch, PR and test yourself.
+
 
 ## What this doesn't solve
 
