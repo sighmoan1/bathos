@@ -53,7 +53,7 @@
     "gray-matter": "4.0.3",
     "input-otp": "1.4.1",
     "lucide-react": "^0.454.0",
-    "next": "16.0.10",
+    "next": "16.4.0",
     "next-themes": "^0.4.6",
     "react": "19.2.0",
     "react-day-picker": "9.8.0",
@@ -70,14 +70,23 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.64.0",
-    "@tailwindcss/postcss": "^4.1.9",
+    "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "postcss": "^8.5",
-    "tailwindcss": "^4.1.9",
+    "postcss": "8.5.23",
+    "tailwindcss": "^4.3.3",
     "tw-animate-css": "1.3.3",
     "typescript": "^5"
   },
-  "packageManager": "pnpm@10.28.0"
+  "packageManager": "pnpm@10.28.0",
+  "pnpm": {
+    "overrides": {
+      "js-yaml@3": "3.15.2",
+      "lodash@4": "4.18.0",
+      "postcss@8": "8.5.23",
+      "nanoid@3": "3.3.18",
+      "source-map-js": "1.2.2"
+    }
+  }
 }
