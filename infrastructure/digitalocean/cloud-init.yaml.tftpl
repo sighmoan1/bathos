@@ -1,0 +1,37 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+packages:
+  - docker.io
+  - docker-compose-v2
+  - curl
+  - ca-certificates
+  - git
+  - jq
+  - unattended-upgrades
+users:
+  - default
+  - name: deploy
+    gecos: Bathos deploy account
+    shell: /bin/bash
+    groups: [docker]
+    lock_passwd: true
+    ssh_authorized_keys:
+      - ${deploy_public_key}
+ssh_pwauth: false
+disable_root: true
+write_files:
+  - path: /etc/ssh/sshd_config.d/60-bathos.conf
+    permissions: '0644'
+    content: |
+      PasswordAuthentication no
+      PermitRootLogin no
+      PubkeyAuthentication yes
+runcmd:
+  - [systemctl, enable, --now, docker]
+  - [systemctl, restart, ssh]
+  - [mkdir, -p, /srv/bathos/apps, /srv/bathos/secrets, /srv/bathos/edge]
+  - [chown, -R, 'deploy:deploy', /srv/bathos]
+  - [chmod, '0700', /srv/bathos/secrets]
+  - [docker, network, create, bathos-edge]
+  - [systemctl, enable, --now, unattended-upgrades]
