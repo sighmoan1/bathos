@@ -2,7 +2,7 @@
 title: "Gassing"
 description: "Making sense of Yegge's worlds"
 date: "2026-10-12"
-tags: ["AI", "software factories", "transformation"]
+tags: ["AI", "software factories", "transformation", "reflection"]
 ---
 
 Finally I understand what it is like to be the traditional-world employee trying to make sense of what the hell these new-world employees are going on about.
