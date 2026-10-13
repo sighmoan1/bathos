@@ -3,7 +3,7 @@
 The `CI` workflow runs the `Release checks` job for pull requests targeting
 `main`, pushes to `main`, merge queues, and manual runs. It uses a standard
 GitHub-hosted Ubuntu runner with Node.js 22 and pnpm 10.28.0. Both package
-lockfiles are enforced before running `pnpm verify:release`, including the
+lockfiles are enforced before checking TypeScript and running `pnpm verify:release`, including the
 publishing Worker's tests, the static build, desktop/Android browser tests and
 mobile manager checks. Browser tests use local servers and mocked publishing
 APIs; CI never publishes posts or deploys to Cloudflare.

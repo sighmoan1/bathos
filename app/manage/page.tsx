@@ -186,7 +186,7 @@ export default function ManagePosts() {
         if (["success", "published", "deployed"].includes(result.state)) { setDeployment({ ...deployment, pending: false, text: "Published. Your changes are live on Bathos." }); return }
         if (["failure", "failed", "error", "cancelled", "canceled"].includes(result.state)) {
           if (result.closed && deployment.slug) {
-            setPost(current => current?.slug === deployment.slug ? { ...current, sha: deployment.previousSha } : current)
+            setPost(current => current && current.slug === deployment.slug ? { ...current, sha: deployment.previousSha } : current)
             setOriginal("")
             try {
               const key = draftKey(deployment.slug), draft = JSON.parse(localStorage.getItem(key) || "null")
@@ -195,7 +195,8 @@ export default function ManagePosts() {
           }
           setDeployment({ ...deployment, pending: !!deployment.publication && !result.merged && !result.closed, text: result.message || "Saved to GitHub, but publishing failed. Your changes are safe; check the deployment before retrying." }); return
         }
-        if (result.message) setDeployment(current => current ? { ...current, text: result.message } : current)
+        const message = result.message
+        if (message) setDeployment(current => current ? { ...current, text: message } : current)
       } catch { if (cancelled) return }
       if (attempt >= 100) { setDeployment(current => current ? { ...current, text: "Your changes are saved. Publishing is taking longer than expected; reload to check again, or view publishing progress." } : current); return }
       timer = setTimeout(() => void poll(attempt + 1), 6000)

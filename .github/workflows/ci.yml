@@ -40,5 +40,7 @@ jobs:
         run: npm ci --prefix workers/admin-oauth
       - name: Install Chromium and its system dependencies
         run: pnpm exec playwright install --with-deps chromium
+      - name: Check TypeScript
+        run: pnpm exec tsc --noEmit
       - name: Run release validation
         run: pnpm verify:release
