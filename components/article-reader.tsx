@@ -35,7 +35,7 @@ export function ArticleReader({ article, onClose, onSave, onDismiss, onTagClick,
       inert={!present}
       tabIndex={-1}
       data-reader-dialog={present ? "active" : "exiting"}
-      initial={animateEntry ? { opacity: 0, y: reducedMotion ? 0 : 50 } : false}
+      initial={reducedMotion || !animateEntry ? false : { opacity: 0, y: 50 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: reducedMotion ? 0 : 50 }}
       transition={{ duration: reducedMotion ? 0 : 0.2 }}
