@@ -4,6 +4,9 @@ export async function submitWebmention({ source, target, endpoint, authorized, p
     throw new Error('Explicit sending authority and a checked live source backlink are required.');
   }
   for (const value of [source, target, endpoint]) {
+    if (typeof value !== 'string' || !value.startsWith('https://') || /[\s\u0000-\u001f\u007f]/u.test(value)) {
+      throw new Error('Use exact absolute https:// URLs without whitespace or control characters.');
+    }
     const url = new URL(value);
     if (url.protocol !== 'https:' || url.username || url.password) {
       throw new Error('Use reviewed public HTTPS URLs without credentials.');

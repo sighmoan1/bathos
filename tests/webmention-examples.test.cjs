@@ -76,7 +76,7 @@ test('Eleventy builds Markdown through the actual Nunjucks layout', { skip: !eng
 test('submission encodes exact canonical URLs and preserves endpoint query parameters', async () => {
   const { submitWebmention } = await import(pathToFileURL(path.join(root, 'submit.mjs')))
   const endpoint = 'https://receiver.example/mentions?key=public-discovery-key'
-  const encodedSource = `${source}?a=1&b=two words`
+  const encodedSource = `${source}?a=1&b=two%20words`
   let calls = 0
   const result = await submitWebmention({ source: encodedSource, target, endpoint, authorized: true, publishedBacklinkChecked: true }, async (url, options) => {
     calls++
@@ -96,7 +96,7 @@ test('submission gates authority/backlink and rejects credential-bearing or non-
   const { submitWebmention } = await import(pathToFileURL(path.join(root, 'submit.mjs')))
   const input = { source, target, endpoint: 'https://receiver.example/mentions', authorized: true, publishedBacklinkChecked: true }
   const neverFetch = () => assert.fail('network must not run')
-  for (const override of [{ authorized: false }, { publishedBacklinkChecked: false }, { source: 'http://example.com/reply/' }, { endpoint: 'https://user:secret@receiver.example/mentions' }, { target: 'not a url' }]) {
+  for (const override of [{ authorized: false }, { publishedBacklinkChecked: false }, { source: 'http://example.com/reply/' }, { source: 'https:example.com/reply/' }, { source: `${source}?raw=two words` }, { target: ` ${target}` }, { endpoint: 'https://receiver.example/\nmentions' }, { endpoint: 'https://user:secret@receiver.example/mentions' }, { target: 'not a url' }]) {
     await assert.rejects(submitWebmention({ ...input, ...override }, neverFetch))
   }
 })

@@ -62,6 +62,9 @@ The helper rejects redirects, omits credentials, and times out. It does not do
 discovery, DNS/IP filtering, or backlink retrieval. Run only against reviewed
 public URLs; never expose it to untrusted input through a server. A production
 sender needs DNS and redirect validation to prevent private-network requests.
+Pass exact absolute `https://` URLs with no raw whitespace or control characters;
+encode spaces as `%20`. The helper preserves the reviewed URI strings rather than
+silently repairing or normalizing them.
 
 Record “accepted for processing” on 202 and “accepted” on other successful 2xx
 responses. Neither proves verification, moderation approval, or visible display.
