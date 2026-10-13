@@ -11,6 +11,7 @@ import { ReplyContext } from "./reply-context"
 import { WebmentionResponses } from "./webmention-responses"
 
 import { ShareButton } from "./share-button"
+import { WebmentionAdoptionLink } from "./webmention-adoption-link"
 
 interface ArticleReaderProps {
   article: Article
@@ -111,6 +112,7 @@ export function ArticleReader({ article, onClose, onSave, onDismiss, onTagClick,
           <ReactMarkdown>{article.content}</ReactMarkdown>
         </div>
         <WebmentionResponses target={`https://bathos.org${postPath(article.slug)}`} />
+        <WebmentionAdoptionLink targetUrl={`https://bathos.org${postPath(article.slug)}`} />
       </article>
     </motion.div>
   )

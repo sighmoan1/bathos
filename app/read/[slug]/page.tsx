@@ -5,6 +5,7 @@ import { WebmentionResponses } from "@/components/webmention-responses"
 import { getAllArticles } from "@/lib/articles"
 import { postPath } from "@/lib/post-links"
 import { ReplyContext } from "@/components/reply-context"
+import { WebmentionAdoptionLink } from "@/components/webmention-adoption-link"
 import styles from "../../articles/reading.module.css"
 
 export const dynamicParams = false
@@ -54,6 +55,7 @@ export default async function Read({ params }: Props) {
           </header>
           <div className={`e-content article-prose ${styles.main}`}><ReactMarkdown>{article.content}</ReactMarkdown></div>
           <WebmentionResponses target={`https://bathos.org${postPath(article.slug)}`} />
+          <WebmentionAdoptionLink targetUrl={`https://bathos.org${postPath(article.slug)}`} />
         </article>
         <footer className={styles.footer}><a href="/articles/">Back to all articles</a></footer>
       </main>

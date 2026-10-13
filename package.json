@@ -11,7 +11,7 @@
     "verify": "pnpm build && pnpm test:e2e",
     "verify:release": "node --test tests/*.test.cjs workers/subscriptions/*.test.mjs && pnpm --dir workers/webmention test && pnpm --dir workers/admin-oauth test && pnpm verify && node scripts/check-post-manager.cjs",
     "blog:add-image": "node scripts/blog-add-image.mjs",
-    "verify:webmentions-enabled": "NEXT_PUBLIC_BATHOS_WEBMENTIONS=true pnpm verify && NEXT_PUBLIC_BATHOS_WEBMENTIONS=false pnpm build"
+    "verify:webmentions-enabled": "NEXT_PUBLIC_BATHOS_WEBMENTIONS=true NEXT_PUBLIC_WEBMENTION_ENDPOINT=/api/webmention pnpm verify && NEXT_PUBLIC_BATHOS_WEBMENTIONS=false NEXT_PUBLIC_WEBMENTION_ENDPOINT= pnpm build"
   },
   "dependencies": {
     "@bathos/design-system": "https://github.com/sighmoan1/bathos-design-system/releases/download/v1.0.1/bathos-design-system-1.0.1.tgz",
