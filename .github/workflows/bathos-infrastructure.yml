@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - infrastructure/digitalocean/**
-      - .github/workflows/infrastructure.yml
+      - .github/workflows/bathos-infrastructure.yml
   workflow_dispatch:
 
 permissions:
