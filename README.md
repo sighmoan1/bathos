@@ -1,4 +1,4 @@
-# TikTok blog feed
+# Bathos
 
 ## Manage posts from your phone
 
@@ -30,36 +30,6 @@ direct-upload project `bathos` does not publish CMS commits automatically.
 Cloudflare manages the DNS record and HTTPS certificate for the domain when
 its zone is in the same account. Recipe changes require a new build; connected
 Git pushes trigger this automatically. The public reader is static; author sign-in uses the separate OAuth Worker.
-Vercel Analytics is enabled only on Vercel deployments.
-
-*Automatically synced with your [v0.app](https://v0.app) deployments*
-
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/sighmoan1s-projects/v0-tik-tok-blog-feed)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.app-black?style=for-the-badge)](https://v0.app/chat/nc74kTneA77)
-
-## Overview
-
-This repository will stay in sync with your deployed chats on [v0.app](https://v0.app).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.app](https://v0.app).
-
-## Deployment
-
-Your project is live at:
-
-**[https://vercel.com/sighmoan1s-projects/v0-tik-tok-blog-feed](https://vercel.com/sighmoan1s-projects/v0-tik-tok-blog-feed)**
-
-## Build your app
-
-Continue building your app on:
-
-**[https://v0.app/chat/nc74kTneA77](https://v0.app/chat/nc74kTneA77)**
-
-## How It Works
-
-1. Create and modify your project using [v0.app](https://v0.app)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
 
 ## Shared Bathos design system
 
@@ -67,18 +37,22 @@ The canonical catalogue is https://design.bathos.org. The reader consumes a pinn
 
 The Git-connected Cloudflare Pages project `bathos-web` builds `pnpm build` from `main` and publishes `out`. The former direct-upload `bathos` project is retained for rollback.
 
-## Validate and release without GitHub Actions
+## Validate and release
 
-GitHub Actions workflows are intentionally removed. Run the complete release checks locally:
+GitHub Actions runs the required `Release checks` job. Validate locally before
+opening a pull request:
 
 ```sh
 pnpm install --frozen-lockfile
 npm ci --prefix workers/admin-oauth
+npm ci --prefix workers/webmention
 pnpm exec playwright install chromium
+pnpm exec tsc --noEmit
 pnpm verify:release
+pnpm verify:webmentions-enabled
 ```
 
-Record validation results in the PR, wait for the Cloudflare Pages check to succeed for its exact head commit, then merge to `main`. Wait for the Cloudflare production deployment of the exact merged commit and check the affected behavior on a fresh online page. Account for the reader's service-worker cache when checking an existing installation.
+Record validation results in the PR, wait for both `Release checks` and `Cloudflare Pages` to succeed for its exact head commit, then merge to `main`. Wait for the Cloudflare production deployment of the exact merged commit and check the affected behavior on a fresh online page. Account for the reader's service-worker cache when checking an existing installation.
 
 Design-system updates are manual: run `node scripts/update-design-system.mjs` with authenticated GitHub access, review the dependency changes, then follow the same validation, PR and deployment process. Major upgrades require deliberate review. The former scheduled Actions updater is disabled.
 
