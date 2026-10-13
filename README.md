@@ -65,9 +65,22 @@ Continue building your app on:
 
 The canonical catalogue is https://design.bathos.org. The reader consumes a pinned `@bathos/design-system` release and maps namespaced typography, radius, lavender selection and amber focus tokens into its existing dark theme. Recipes, reading controls, saved articles and trash retain their behaviour. `pnpm verify` builds the static export and checks desktop/Android reader navigation.
 
-The Git-connected Cloudflare Pages project `bathos-web` builds `pnpm build` from main and publishes `out`. The former direct-upload `bathos` project is retained for rollback. Compatible release updates verify the consumer, open an adoption PR and merge it; Git-connected Pages builds deploy the resulting main revision. Major upgrades require deliberate review.
+The Git-connected Cloudflare Pages project `bathos-web` builds `pnpm build` from `main` and publishes `out`. The former direct-upload `bathos` project is retained for rollback.
 
-Enable `DESIGN_SYSTEM_UPDATES_ENABLED=true` only after private-repository Actions billing is working and Actions may create update PRs. The updater runs reader verification and waits for hosting checks before merging. GitHub blocked the initial CI job before it started because account billing needs attention; local and Cloudflare-preview browser checks passed.
+## Validate and release without GitHub Actions
+
+GitHub Actions workflows are intentionally removed. Run the complete release checks locally:
+
+```sh
+pnpm install --frozen-lockfile
+npm ci --prefix workers/admin-oauth
+pnpm exec playwright install chromium
+pnpm verify:release
+```
+
+Record validation results in the PR, wait for the Cloudflare Pages check to succeed for its exact head commit, then merge to `main`. Wait for the Cloudflare production deployment of the exact merged commit and check the affected behavior on a fresh online page. Account for the reader's service-worker cache when checking an existing installation.
+
+Design-system updates are manual: run `node scripts/update-design-system.mjs` with authenticated GitHub access, review the dependency changes, then follow the same validation, PR and deployment process. Major upgrades require deliberate review. The former scheduled Actions updater is disabled.
 
 ## Install the reader
 

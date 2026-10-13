@@ -229,6 +229,8 @@ export function SwipeFeed({ initialArticles, allTags, initialReadingArticle }: S
     onSave: handleSwipeRight,
   })
 
+  // Count only bookmarks that resolve in this catalog, just like the saved list.
+  // Keep stored slugs so restored posts and older offline catalogs retain bookmarks.
   const savedArticles = initialArticles.filter((a) => saved.includes(a.slug))
   const trashedArticles = initialArticles.filter((a) => dismissed.includes(a.slug))
 
@@ -300,9 +302,9 @@ export function SwipeFeed({ initialArticles, allTags, initialReadingArticle }: S
                 className="relative p-2 rounded-lg hover:bg-secondary transition-colors"
               >
                 <Bookmark className="w-5 h-5 text-foreground" />
-                {saved.length > 0 && (
+                {savedArticles.length > 0 && (
                   <span className="absolute -top-1 -right-1 w-4 h-4 bg-success text-success-foreground text-xs font-bold rounded-full flex items-center justify-center">
-                    {saved.length}
+                    {savedArticles.length}
                   </span>
                 )}
               </button>
@@ -392,13 +394,13 @@ export function SwipeFeed({ initialArticles, allTags, initialReadingArticle }: S
                 </>
               )}
 
-              {saved.length > 0 && (
+              {savedArticles.length > 0 && (
                 <button
                   onClick={() => setShowSaved(true)}
                   className="mt-3 flex items-center gap-2 px-5 py-2.5 bg-secondary text-secondary-foreground rounded-xl font-semibold text-sm hover:opacity-90 transition-opacity"
                 >
                   <Bookmark className="w-4 h-4" />
-                  View Saved ({saved.length})
+                  View Saved ({savedArticles.length})
                 </button>
               )}
             </div>

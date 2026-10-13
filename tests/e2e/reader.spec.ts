@@ -122,3 +122,35 @@ test('phone UI remains readable in normal and desktop-requested viewports', asyn
     await context.close()
   }
 })
+
+
+test('bookmark count matches available saved articles after posts are removed', async ({ page }) => {
+  const missing = ['victoria-sponge', 'sticky-ginger-parkin', 'new-york-cheesecake']
+  await page.addInitScript(slugs => {
+    if (!localStorage.getItem('swipe-reader-saved')) localStorage.setItem('swipe-reader-saved', JSON.stringify(slugs))
+  }, missing)
+  await page.goto('/')
+  const savedButton = page.getByRole('button', { name: 'Open saved articles' })
+  await expect(savedButton).toBeVisible()
+  await expect(savedButton.locator('span')).toHaveCount(0)
+  await savedButton.click()
+  await expect(page.getByText('No saved articles yet', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Back', exact: true }).click()
+
+  const title = await page.locator('.reader-title').textContent()
+  await page.getByRole('button', { name: 'Save', exact: true }).click()
+  await expect(savedButton.locator('span')).toHaveText('1')
+  // Include a duplicate and deleted posts: the list still contains one article.
+  await page.evaluate(() => {
+    const slugs = JSON.parse(localStorage.getItem('swipe-reader-saved')!)
+    localStorage.setItem('swipe-reader-saved', JSON.stringify([...slugs, slugs.at(-1)]))
+  })
+  await page.reload()
+  await expect(savedButton.locator('span')).toHaveText('1')
+  await savedButton.click()
+  await expect(page.getByRole('heading', { level: 3 })).toHaveText(title!)
+  await page.getByRole('button', { name: `Remove from saved: ${title}` }).click()
+  await expect(page.getByText('No saved articles yet', { exact: true })).toBeVisible()
+  await expect(savedButton.locator('span')).toHaveCount(0)
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('swipe-reader-saved')!))).toEqual(missing)
+})
