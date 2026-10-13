@@ -18,7 +18,7 @@ export function verifiedResponses(payload: unknown, target: string): WebmentionR
     if (row.target !== target || typeof row.source !== "string" || row.source.length > 2048) return []
     let source: URL
     try { source = new URL(row.source) } catch { return [] }
-    if (!["https:", "http:"].includes(source.protocol) || source.username || source.password || seen.has(source.href)) return []
+    if (source.href.length > 2048 || !["https:", "http:"].includes(source.protocol) || source.username || source.password || seen.has(source.href)) return []
     if (row.status !== undefined && row.status !== "approved") return []
     seen.add(source.href)
     const plain = (text: unknown, limit: number) => typeof text === "string" ? text.replace(/[\u0000-\u001f\u007f]/g, "").slice(0, limit) : ""
