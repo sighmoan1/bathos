@@ -1,0 +1,32 @@
+# Shared edge on one Droplet. Create /srv/bathos/secrets/bathos-edge.env on the host.
+# Set CLOUDFLARE_TUNNEL_TOKEN only there. A single wildcard hostname ingress
+# in Cloudflare points *.bathos.org -> http://traefik:80.
+services:
+  traefik:
+    image: traefik:v3.5
+    restart: unless-stopped
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=bathos-edge
+      - --entrypoints.web.address=:80
+      - --api.dashboard=false
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks: [edge]
+    security_opt:
+      - no-new-privileges:true
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?set in host secrets}
+    networks: [edge]
+    depends_on: [traefik]
+    security_opt:
+      - no-new-privileges:true
+networks:
+  edge:
+    name: bathos-edge
+    external: true
