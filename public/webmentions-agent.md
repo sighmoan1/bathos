@@ -61,8 +61,8 @@ discovery client or hosted proxy.
 ## Implementation boundaries
 
 Start with the framework-specific examples in the repository and its README.
-For Bathos maintainers, follow `AGENTS.md` and the existing outbound sender's
-documentation; the examples do not replace it.
+For Bathos maintainers, follow `AGENTS.md` and the repository's documented
+outbound workflow when available; these examples do not replace a production sender.
 
 Keep sending behind an explicit operator action or an authorised post-publication
 job. Do not expose an arbitrary URL-fetching endpoint to visitors. Production
