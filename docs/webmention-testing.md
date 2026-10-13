@@ -22,7 +22,7 @@ NEXT_PUBLIC_BATHOS_WEBMENTIONS=true pnpm exec playwright test tests/e2e/webmenti
 pnpm build
 ```
 
-The last command restores the default disabled export. Enabled tests run on desktop and Android: approved links render as escaped text, pending/invalid records remain hidden, empty and unavailable states differ, 100 valid receiver records exceeding 64 KiB render, and payloads exceeding 1 MiB fail closed. Default-only cases are explicitly skipped in enabled QA; enabled-only cases are explicitly skipped in normal release. Both variants must be run when changing the response component or browser verification.
+The last command restores the default disabled export. Enabled tests run on desktop and Android across both the canonical swipe route `/posts/Gassing/` and the conventional reading route `/read/Gassing/`, using canonical `/posts/Gassing/` as the API target: approved links render as escaped text, pending/invalid records remain hidden, empty and unavailable states differ, 100 valid receiver records exceeding 64 KiB render, and payloads exceeding 1 MiB fail closed. URLs that exceed the 2,048-character bound after Unicode normalization and excessive valid date precision are omitted. Default-only cases are explicitly skipped in enabled QA; enabled-only cases are explicitly skipped in normal release. Both variants must be run when changing the response component or browser verification.
 
 For simultaneous agents, serve only your own `out` directory on a dedicated port and set `READER_BASE_URL` consistently for every browser command. The default Playwright server uses port 3021. A stable server with a listen backlog of at least 128 avoids observed local connection resets during parallel browser runs. Never reuse another agent's build or server.
 
