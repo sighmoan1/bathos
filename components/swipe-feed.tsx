@@ -136,8 +136,8 @@ export function SwipeFeed({ initialArticles, allTags, initialReadingArticle }: S
 
   const currentArticle = articles[currentIndex]
   const hasArticles = articles.length > 0
-  const hasPrevious = currentIndex > 0
-  const hasNext = currentIndex < articles.length - 1
+  const hasPrevious = articles.length > 1
+  const hasNext = articles.length > 1
 
   // Functional update so navigations that land in the same React batch compose
   // (two quick clicks move two cards) instead of collapsing into one.
@@ -147,7 +147,7 @@ export function SwipeFeed({ initialArticles, allTags, initialReadingArticle }: S
         if (articles.length === 0) return prev
         const from = prev ? articles.findIndex((a) => a.slug === prev) : -1
         const base = from >= 0 ? from : Math.min(lastIndexRef.current, articles.length - 1)
-        const next = Math.max(0, Math.min(base + delta, articles.length - 1))
+        const next = ((base + delta) % articles.length + articles.length) % articles.length
         return articles[next].slug
       })
     },
