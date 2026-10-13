@@ -12,7 +12,7 @@ interface FeedKeyboardHandlers {
 
 function isTypingTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false
-  if (target.isContentEditable) return true
+  if (target.isContentEditable || target.closest("button, a[href], [role=button], [role=link], [tabindex]")) return true
   return ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)
 }
 

@@ -3,8 +3,8 @@
 import type { ComponentType } from "react"
 import { ArrowLeft } from "lucide-react"
 import type { Article } from "@/lib/articles"
-import { motion } from "framer-motion"
-import { useEscapeKey } from "@/lib/use-feed-controls"
+import { motion, useReducedMotion } from "framer-motion"
+import { useReaderDialog } from "@/lib/use-reader-dialog"
 
 interface RowAction {
   icon: ComponentType<{ className?: string }>
@@ -48,13 +48,23 @@ export function ArticleListPanel({
   const RowIcon = rowAction.icon
   const HeaderIcon = headerAction?.icon
 
-  useEscapeKey(true, onClose)
+  const { ref, titleId, present } = useReaderDialog(onClose)
+  const reducedMotion = useReducedMotion()
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: 300 }}
+      ref={ref}
+      role="dialog"
+      aria-modal={present ? true : undefined}
+      aria-labelledby={titleId}
+      aria-hidden={!present || undefined}
+      inert={!present}
+      tabIndex={-1}
+      data-reader-dialog={present ? "active" : "exiting"}
+      initial={{ opacity: 0, x: reducedMotion ? 0 : 300 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 300 }}
+      exit={{ opacity: 0, x: reducedMotion ? 0 : 300 }}
+      transition={{ duration: reducedMotion ? 0 : 0.2 }}
       className="fixed inset-0 bg-background z-50 overflow-y-auto overscroll-contain"
     >
       {/* Header */}
@@ -67,7 +77,7 @@ export function ArticleListPanel({
             <ArrowLeft className="w-5 h-5" />
             <span>Back</span>
           </button>
-          <h1 className="text-xl font-bold">{title}</h1>
+          <h1 id={titleId} className="text-xl font-bold">{title}</h1>
           {headerAction && HeaderIcon && articles.length > 0 && (
             <button
               onClick={headerAction.onAction}
@@ -93,11 +103,11 @@ export function ArticleListPanel({
             <div className="space-y-4">
               {articles.map((article) => (
                 <div key={article.slug} className="bg-card border border-border rounded-xl p-4 flex items-start gap-4">
-                  <div className="flex-grow cursor-pointer" onClick={() => onSelect(article)}>
-                    <h3 className="font-semibold text-foreground mb-1">{article.title}</h3>
-                    <p className="text-muted-foreground text-sm line-clamp-2">{article.description}</p>
+                  <button type="button" aria-label={`Read ${article.title}`} className="flex-grow text-left" onClick={() => onSelect(article)}>
+                    <span className="block font-semibold text-foreground mb-1">{article.title}</span>
+                    <span className="block text-muted-foreground text-sm line-clamp-2">{article.description}</span>
                     {article.tags && article.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
+                      <span className="flex flex-wrap gap-1 mt-2">
                         {article.tags.slice(0, 2).map((tag) => (
                           <span
                             key={tag}
@@ -106,9 +116,9 @@ export function ArticleListPanel({
                             {tag}
                           </span>
                         ))}
-                      </div>
+                      </span>
                     )}
-                  </div>
+                  </button>
                   <button
                     onClick={() => rowAction.onAction(article.slug)}
                     title={rowAction.label}
