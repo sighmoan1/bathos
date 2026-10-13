@@ -26,6 +26,7 @@ test('exported discovery catalog, sitemap, robots and RSS agree on every post',a
  expect(parsed.errors).toBe(0)
  expect(parsed.modified).toBe(0)
  expect(parsed.urls).toContain("https://bathos.org/articles/")
+ expect((await page.request.get("/articles/")).ok()).toBe(true)
  expect(parsed.urls).toHaveLength(slugs.length+2)
  for(const article of catalog.articles){
   expect(parsed.urls.filter(url=>url===article.canonicalUrl)).toHaveLength(1)
@@ -34,6 +35,8 @@ test('exported discovery catalog, sitemap, robots and RSS agree on every post',a
   if(article.date) expect(Number.isFinite(Date.parse(article.date))).toBe(true)
   const response=await page.request.get(new URL(article.canonicalUrl).pathname)
   expect(response.ok()).toBe(true)
+  const readingResponse=await page.request.get(new URL(article.readingUrl).pathname)
+  expect(readingResponse.ok()).toBe(true)
  }
  await page.goto(new URL(catalog.articles[0].canonicalUrl).pathname)
  await expect(page.locator('link[rel=canonical]')).toHaveAttribute('href',catalog.articles[0].canonicalUrl)
