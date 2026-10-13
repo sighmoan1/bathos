@@ -3,10 +3,11 @@ import fs from 'node:fs'
 
 test.use({ javaScriptEnabled: false })
 
-test('exported article guides humans and agents to reply without JavaScript', async ({ page }) => {
+for (const view of ['posts', 'read']) {
+test(`exported ${view} article guides humans and agents to reply without JavaScript`, async ({ page }) => {
   const slug = fs.readdirSync('content').find(name => name.endsWith('.md'))!.slice(0, -3)
   const path = `/posts/${encodeURIComponent(slug)}/`
-  await page.goto(path)
+  await page.goto(`/${view}/${encodeURIComponent(slug)}/`)
   await expect(page.locator('article h1')).toBeVisible()
   const guidance = page.getByRole('complementary', { name: 'Reply from your own website' })
   await guidance.scrollIntoViewIfNeeded()
@@ -18,3 +19,4 @@ test('exported article guides humans and agents to reply without JavaScript', as
   // Publishing instructions does not announce an unconfigured receiver.
   await expect(page.locator('link[rel~=webmention], a[rel~=webmention]')).toHaveCount(0)
 })
+}
