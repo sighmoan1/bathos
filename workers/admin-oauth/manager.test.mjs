@@ -67,7 +67,7 @@ test('same-window OAuth flow checks push permission, issues cookie, redirects wi
  const start=await handleRequest(new Request('https://bathos.org/api/login'),env);const cookie=start.headers.get('set-cookie').split(';')[0], state=new URL(start.headers.get('location')).searchParams.get('state');
  let calls=0;
  const response=await handleRequest(new Request(`https://bathos.org/api/callback?state=${state}&code=code`,{headers:{Cookie:cookie}}),env,async(url,opts)=>{
-  if(++calls===1){assert.equal(typeof JSON.parse(opts.body).code_verifier,'string');return Response.json({access_token:'private-token'});}
+  if(++calls===1){assert.equal(typeof JSON.parse(opts.body).code_verifier,'string');return Response.json({access_token:'private-token',scope:' public_repo\t'});}
   if(calls===2)return Response.json({permissions:{push:true}});
   return Response.json({login:'writer'});
  });
@@ -79,7 +79,7 @@ test('same-window OAuth flow checks push permission, issues cookie, redirects wi
 test('manage OAuth denies repository write access and cancellation without exposing token',async()=>{
  for(const denied of [false,true]) {
   const start=await handleRequest(new Request('https://bathos.org/api/login'),env),state=new URL(start.headers.get('location')).searchParams.get('state');let calls=0;
-  const response=await handleRequest(new Request(`https://bathos.org/api/callback?state=${state}&code=code${denied?'&error=access_denied':''}`,{headers:{Cookie:start.headers.get('set-cookie').split(';')[0]}}),env,async()=>Response.json(++calls===1?{access_token:'private-token'}:{permissions:{push:false}}));
+  const response=await handleRequest(new Request(`https://bathos.org/api/callback?state=${state}&code=code${denied?'&error=access_denied':''}`,{headers:{Cookie:start.headers.get('set-cookie').split(';')[0]}}),env,async()=>Response.json(++calls===1?{access_token:'private-token',scope:'public_repo'}:{permissions:{push:false}}));
   assert.equal(response.status,303);assert.match(response.headers.get('location'),/auth_error=(permission|denied)/);assert.doesNotMatch(response.headers.get('set-cookie'),/__Host-bathos-session=/);
  }
 });

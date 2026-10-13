@@ -4,12 +4,13 @@ import fs from 'node:fs';
 import { createRequire } from 'node:module';
 const require = createRequire(new URL('../../package.json', import.meta.url));
 const matter = require('gray-matter');
-const config = matter(`---\n${fs.readFileSync(new URL('../../public/admin/config.yml',import.meta.url),'utf8')}\n---`).data;
-test('CMS preserves existing Markdown fields, branch and filename model',()=>{
- assert.equal(config.backend.repo,'sighmoan1/bathos');assert.equal(config.backend.branch,'main');assert.equal(config.backend.auth_scope,'repo');
- const collection=config.collections[0];
- assert.equal(collection.folder,'content');assert.equal(collection.extension,'md');assert.equal(collection.create,true);assert.equal(collection.delete,true);
- assert.deepEqual(collection.fields.map(field=>field.name),['title','description','date','tags','body']);
+test('admin redirects to the manager and exposes no obsolete browser-token client assets',()=>{
+ const directory=new URL('../../public/admin/',import.meta.url);
+ assert.deepEqual(fs.readdirSync(directory),['index.html']);
+ const html=fs.readFileSync(new URL('index.html',directory),'utf8');
+ assert.match(html,/url=\/manage\//);assert.doesNotMatch(html,/<script|decap/i);
+});
+test('existing Markdown retains the manager content model',()=>{
  const directory=new URL('../../content/',import.meta.url);
  for(const file of fs.readdirSync(directory).filter(file=>file.endsWith('.md'))){
   const post=matter(fs.readFileSync(new URL(file,directory),'utf8'));

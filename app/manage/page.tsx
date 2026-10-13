@@ -105,7 +105,14 @@ export default function ManagePosts() {
       if (!(e instanceof ApiError && e.status === 401)) setError(e instanceof Error ? e.message : "Could not check sign-in.")
     }
     const params = new URLSearchParams(window.location.search)
-    if (params.has("auth_error") || params.has("error")) setError(params.get("auth_error") === "permission" ? "That GitHub account does not have permission to manage Bathos. Sign in with the site owner’s account." : "GitHub sign-in did not finish. Please try signing in again.")
+    if (params.has("auth_error") || params.has("error")) {
+      const reason = params.get("auth_error")
+      setError(reason === "permission"
+        ? "That GitHub account does not have permission to manage Bathos. Sign in with the site owner’s account."
+        : reason === "scope"
+          ? "Your GitHub authorization needs updating. Revoke the Bathos app in GitHub Settings → Applications → Authorized OAuth Apps, then sign in again."
+          : "GitHub sign-in did not finish. Please try signing in again.")
+    }
   }, [loadPosts])
 
   useEffect(() => { void checkSession() }, [checkSession])
