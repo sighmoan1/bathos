@@ -1,6 +1,7 @@
 import fs from "fs"
 import path from "path"
 import matter from "gray-matter"
+import { parseInReplyTo } from "./reply-metadata"
 
 export interface Article {
   slug: string
@@ -9,6 +10,7 @@ export interface Article {
   content: string
   date?: string
   tags?: string[]
+  inReplyTo?: string[]
 }
 
 const contentDirectory = path.join(process.cwd(), "content")
@@ -35,6 +37,7 @@ export function getAllArticles(): Article[] {
         content,
         date: data.date || null,
         tags: data.tags || [],
+        inReplyTo: parseInReplyTo(data.inReplyTo),
       }
     })
 
@@ -58,6 +61,7 @@ export function getArticleBySlug(slug: string): Article | null {
     content,
     date: data.date || null,
     tags: data.tags || [],
+    inReplyTo: parseInReplyTo(data.inReplyTo),
   }
 }
 
