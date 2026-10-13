@@ -1,6 +1,6 @@
 "use client"
 
-import { motion, useMotionValue, useTransform, type PanInfo } from "framer-motion"
+import { motion, useIsPresent, useReducedMotion, useMotionValue, useTransform, type PanInfo } from "framer-motion"
 import { X, Bookmark, ArrowRight, ChevronUp, ChevronDown, Trash2 } from "lucide-react"
 import type { Article } from "@/lib/articles"
 import { forwardRef, useRef, useState, type MouseEvent as MouseEvent_ } from "react"
@@ -44,6 +44,8 @@ export const ArticleCard = forwardRef<HTMLDivElement, ArticleCardProps>(function
 ) {
   const preview = article.content.trim().split(/\n\s*\n/).find(paragraph => !paragraph.startsWith("#") && !paragraph.startsWith("```"))
 
+  const present = useIsPresent()
+  const reducedMotion = useReducedMotion()
   const x = useMotionValue(0)
   const y = useMotionValue(0)
 
@@ -115,24 +117,26 @@ export const ArticleCard = forwardRef<HTMLDivElement, ArticleCardProps>(function
   return (
     <motion.div
       ref={ref}
+      aria-hidden={!present || undefined}
+      inert={!present}
       className="reader-card w-full"
       style={{
         x: isTop ? x : 0,
         y: isTop ? y : 0,
-        rotate: isTop ? rotate : 0,
+        rotate: isTop && !reducedMotion ? rotate : 0,
       }}
       drag={isTop}
       dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
       dragElastic={0.6}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
-      initial={{ opacity: 0, scale: 0.9 }}
+      initial={{ opacity: 0, scale: reducedMotion ? 1 : 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       // The swipe direction belongs to the exit, not to `animate`. Driving both
       // at once left the exit animation unresolved, so AnimatePresence never
       // unmounted the card and they piled up.
-      exit={exitDirection ? exitAnimations[exitDirection] : { opacity: 0, scale: 0.9 }}
-      transition={{ duration: 0.25 }}
+      exit={reducedMotion ? { opacity: 0 } : exitDirection ? exitAnimations[exitDirection] : { opacity: 0, scale: 0.9 }}
+      transition={{ duration: reducedMotion ? 0 : 0.25 }}
     >
       <div className="reader-card-surface relative w-full bg-card rounded-2xl border border-border overflow-hidden shadow-xl">
         {/* Swipe indicators */}
@@ -187,6 +191,7 @@ export const ArticleCard = forwardRef<HTMLDivElement, ArticleCardProps>(function
 
         {/* Card content - More compact layout */}
         <div className="reader-card-content flex flex-col p-5 short:p-3.5">
+          <div className="reader-card-body">
           {/* Tags */}
           {article.tags && article.tags.length > 0 && (
             <div className="reader-card-tags flex flex-wrap gap-1.5 mb-3 short:mb-2">
@@ -234,6 +239,8 @@ export const ArticleCard = forwardRef<HTMLDivElement, ArticleCardProps>(function
           )}
 
           {preview && <div className="reader-mobile-preview"><p>{preview.replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/[*_`]/g, "")}</p></div>}
+
+          </div>
 
           {/* Actions. The bin and bookmark buttons are the click-driven
               equivalent of swiping the card left and right. */}
