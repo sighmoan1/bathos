@@ -15,7 +15,7 @@ export function verifiedResponses(payload: unknown, target: string): WebmentionR
   return (payload as { responses: unknown[] }).responses.slice(0, 100).flatMap((value) => {
     if (!value || typeof value !== "object") return []
     const row = value as Record<string, unknown>
-    if (row.target !== target || typeof row.source !== "string") return []
+    if (row.target !== target || typeof row.source !== "string" || row.source.length > 2048) return []
     let source: URL
     try { source = new URL(row.source) } catch { return [] }
     if (!["https:", "http:"].includes(source.protocol) || source.username || source.password || seen.has(source.href)) return []
