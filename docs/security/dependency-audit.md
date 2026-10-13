@@ -12,7 +12,10 @@ proven Bathos exploits.
 The reviewed lockfile upgrades Next.js from 16.0.10 to 16.4.0 and the Tailwind
 compiler packages to 4.3.3. Updating Tailwind removes its old archive-extraction
 `tar` dependency. Other packages are refreshed within their existing version
-ranges. The design-system 1.0.1 archive URL and SHA-512 integrity are unchanged.
+ranges. Unused Recharts is removed: no source imports or chart components exist,
+and it was the only path to lodash. The registry marks lodash 4.18.0 as a bad
+release, so that candidate and its override are removed; no vulnerable downgrade
+is used. The design-system 1.0.1 archive URL and SHA-512 integrity are unchanged.
 Frozen-lockfile installs remain required.
 
 Narrow transitive overrides select patched versions without changing public
@@ -21,7 +24,6 @@ APIs across major versions:
 | Dependency | Selection | Compatibility and exposure |
 | --- | --- | --- |
 | js-yaml 3.x | 3.15.2 | Same major; preserves `safeLoad` used by gray-matter. Parses repository-controlled Markdown front matter during builds. |
-| lodash 4.x | 4.18.0 | Same major used by Recharts. Removes prototype-pollution advisories; deprecated upstream package still needs future migration if charts become used. |
 | PostCSS 8.x | 8.5.23 | Same major for Next/Tailwind/autoprefixer CSS compilation; fixes scanner-reported parsing advisories. |
 | nanoid 3.x | 3.3.18 | Same major transitive ID generator used by PostCSS. |
 | source-map-js | 1.2.2 | Patch upgrade of compiler source-map library. |
