@@ -126,13 +126,12 @@ async function checkedPublishingFlow(browser, origin) {
   await until(() => polls >= 2, 'pending publication did not resume after reload');
   state = 'failure';
   await page.reload();
-  await page.getByText('Publishing checks failed. Your changes are saved in GitHub and your draft is kept.', { exact: true }).waitFor();
+  await page.getByRole('status').filter({ hasText: 'Publishing checks failed. Your changes are saved in GitHub and your draft is kept.' }).waitFor();
   assert.equal(submissions, 1);
   state = 'success';
   await page.reload();
-  await page.getByText('Published. Your changes are live on Bathos.', { exact: true }).waitFor();
+  await page.getByRole('status').filter({ hasText: 'Published. Your changes are live on Bathos.' }).waitFor();
   await page.getByRole('heading', { name: 'Checked publication', exact: true }).waitFor();
-  await until(() => true, 'publication complete');
   assert.equal(await page.evaluate(() => localStorage.getItem('bathos:pending-publication')), null);
   assert.equal(submissions, 1);
   await context.close();
