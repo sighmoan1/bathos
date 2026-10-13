@@ -1,5 +1,7 @@
 # Inbound Webmentions
 
+Reviewed source versions hash the complete HTML after native HTMLRewriter removes script and template elements. Changing injected challenge scripts does not invalidate an unchanged article's approval. Body text, metadata, markup and backlink attributes remain in the version; changes require review, and a removed live backlink retracts the response. Script/template content cannot supply a backlink and is never executed.
+
 This separate Worker implements issue #39 and receiver abuse controls from #41. It is disabled in committed configuration. It does not provision resources or share the admin OAuth Worker's credentials.
 
 ## Deployment prerequisites
