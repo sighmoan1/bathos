@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import fs from 'node:fs'
+import { webmentionEndpoint } from '../../lib/webmention-submission'
 
 test.use({ javaScriptEnabled: false })
 
@@ -20,7 +21,14 @@ test(`exported ${view} article guides humans and agents to reply without JavaScr
     .toHaveAttribute('href', `/webmentions?target=${encodeURIComponent(`https://bathos.org${path}`)}`)
   await expect(guidance.getByRole('link', { name: 'Webmention implementation instructions', exact: true }))
     .toHaveAttribute('href', '/webmentions-agent.md')
-  // Publishing instructions does not announce an unconfigured receiver.
-  await expect(page.locator('link[rel~=webmention], a[rel~=webmention]')).toHaveCount(0)
+  const receiver = webmentionEndpoint()
+  const discovery = page.locator('link[rel~=webmention], a[rel~=webmention]')
+  if (receiver) {
+    await expect(discovery).toHaveCount(1)
+    await expect(discovery).toHaveAttribute('href', receiver)
+  } else {
+    // Publishing instructions does not announce an unconfigured receiver.
+    await expect(discovery).toHaveCount(0)
+  }
 })
 }
