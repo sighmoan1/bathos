@@ -18,7 +18,7 @@ export function TagFilter({ tags, selected, onToggle, onClear }: TagFilterProps)
   if (tags.length === 0) return null
 
   return (
-    <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <div className="reader-tag-filter flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       <button
         type="button"
         onClick={onClear}
