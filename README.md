@@ -79,7 +79,7 @@ and desktop browsers, choose Install app from the browser menu.
 Visit online once before reading offline. The installed app opens the reader
 in a standalone window, and the exported articles and reader assets are cached
 together. Saved articles, hidden articles and filters remain on this device.
-Use **Update app** when offered to load a new release and its articles.
+New reader releases and their articles download in the background and apply when you switch away from the app. Reopening the app also lets a waiting release take over.
 The reader cache excludes sign-in, post management and API responses; the
 manager keeps its own offline shell and device drafts.
 

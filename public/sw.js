@@ -20,7 +20,7 @@ self.addEventListener("fetch", event => {
   if (request.method !== "GET" || url.origin !== self.location.origin || /^\/(api|admin|manage)(\/|$)/.test(url.pathname)) return;
   if (request.mode === "navigate" && PRECACHE.includes(url.pathname)) {
     // Keep HTML and its hashed assets in the same build. A newly installed
-    // worker waits for the reader's Update app action before taking over.
+    // worker waits until the reader is backgrounded before taking over.
     event.respondWith(caches.open(CACHE_NAME).then(async cache => (await cache.match(url.pathname)) || fetch(request)));
     return;
   }

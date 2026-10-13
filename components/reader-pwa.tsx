@@ -12,7 +12,6 @@ export function ReaderPwa() {
   const [prompt, setPrompt] = useState<InstallPrompt | null>(null)
   const [installed, setInstalled] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
-  const [waiting, setWaiting] = useState<ServiceWorker | null>(null)
 
   useEffect(() => {
     setInstalled(window.matchMedia("(display-mode: standalone)").matches || Boolean((navigator as Navigator & { standalone?: boolean }).standalone))
@@ -22,6 +21,14 @@ export function ReaderPwa() {
     window.addEventListener("appinstalled", onInstalled)
     let active = true
     let reloadOnChange = false
+    let waiting: ServiceWorker | null = null
+    const applyUpdate = () => {
+      if (waiting && document.visibilityState === "hidden") {
+        reloadOnChange = true
+        waiting.postMessage({ type: "SKIP_WAITING" })
+      }
+    }
+    document.addEventListener("visibilitychange", applyUpdate)
     const onControllerChange = () => { if (reloadOnChange) window.location.reload() }
     navigator.serviceWorker?.addEventListener("controllerchange", onControllerChange)
     if (process.env.NODE_ENV === "production" && "serviceWorker" in navigator) {
@@ -29,8 +36,8 @@ export function ReaderPwa() {
         if (!active) return
         const checkUpdate = () => {
           if (active && registration.waiting && navigator.serviceWorker.controller) {
-            reloadOnChange = true
-            setWaiting(registration.waiting)
+            waiting = registration.waiting
+            applyUpdate()
           }
         }
         checkUpdate()
@@ -39,6 +46,7 @@ export function ReaderPwa() {
     }
     return () => {
       active = false
+      document.removeEventListener("visibilitychange", applyUpdate)
       window.removeEventListener("beforeinstallprompt", beforeInstall)
       window.removeEventListener("appinstalled", onInstalled)
       navigator.serviceWorker?.removeEventListener("controllerchange", onControllerChange)
@@ -54,7 +62,6 @@ export function ReaderPwa() {
   }
 
   return <>
-    {waiting && <button className="px-3 py-2 rounded-lg bg-accent text-accent-foreground text-sm" onClick={() => waiting.postMessage({ type: "SKIP_WAITING" })}>Update app</button>}
     {!installed && <button onClick={install} aria-label="Install Bathos" aria-expanded={showHelp} className="p-2 rounded-lg hover:bg-secondary transition-colors"><Download className="w-5 h-5" /></button>}
     {showHelp && <div className="absolute top-full inset-x-0 border-b border-border bg-card p-4 shadow-xl" role="region" aria-label="Install Bathos instructions">
       <div className="flex items-center justify-between gap-4"><strong>Install Bathos</strong><button onClick={() => setShowHelp(false)} aria-label="Close installation instructions" className="p-2 rounded-lg hover:bg-secondary"><X className="w-5 h-5" /></button></div>
