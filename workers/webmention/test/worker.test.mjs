@@ -12,7 +12,7 @@ async function setup(html=`<title>A reply</title><a href="${target}">Bathos</a>`
     const url=new URL(request.url);
     if(url.origin==='https://cloudflare-dns.com') return new MFResponse(JSON.stringify({Status:0,Answer:[{type:1,data:'93.184.216.34'}]}));
     if(url.href===target) return new MFResponse(`<link rel="canonical" href="${target}">`,{status:extra.TARGET_STATUS||200,headers:{'content-type':'text/html'}});
-    if(url.origin==='https://reply.site') {const value=typeof html==='object'?html:{body:html};return new MFResponse(value.body,{status:value.status||200,headers:{'content-type':'text/html'}});}
+    if(url.origin==='https://reply.site') {const value=typeof html==='object'?html:{body:html};if(value.fail && url.href===source)return new MFResponse('',{status:503});return new MFResponse(value.body,{status:value.status||200,headers:{'content-type':'text/html'}});}
     throw new Error('Unexpected outbound URL '+url.href);
   }}));
   const db=await mf.getD1Database('DB'); await db.exec((await readFile(new URL('../migrations/0001_webmentions.sql',import.meta.url),'utf8')).replace(/\n/g,' '));
@@ -25,6 +25,7 @@ async function setup(html=`<title>A reply</title><a href="${target}">Bathos</a>`
 test('rejects unsafe URL schemes, credentials, ports, literals and reserved hosts',()=>{
  for (const url of [null,'','ftp://reply.site/x','https://u:p@reply.site/x','https://reply.site:8443/x','http://127.0.0.1','http://2130706433','https://[::1]/','https://[::ffff:127.0.0.1]/','http://metadata.internal/x','https://reply.site/x#fragment']) assert.throws(()=>publicURL(url));
  for (const ip of ['127.0.0.1','10.0.0.1','169.254.169.254','172.16.0.1','192.168.1.1','0.0.0.0','::1','fe80::1','fc00::1','::ffff:127.0.0.1','2001:db8::1']) assert.equal(publicIP(ip),false,ip);
+ assert.throws(()=>publicURL('https://reply.site/'+ '😀'.repeat(200)),/Unsafe URL/);
  assert.equal(publicIP('93.184.216.34'),true);
 });
 test('caps streamed bodies without Content-Length',async()=>{await assert.rejects(()=>boundedText(new Response('abcdef'),4),/Body too large/);});
@@ -101,4 +102,13 @@ test('unpublished canonical target rejected without creating a mention',async(t)
 test('scheduled runtime revalidation retracts removed source',async(t)=>{
  const remote={body:`<a href="${target}">reply</a>`};const app=await setup(remote);t.after(()=>app.mf.dispose());await app.receive();await app.moderate('approved');remote.body='No backlink';
  const worker=await app.mf.getWorker();await worker.scheduled({scheduledTime:Date.now(),cron:'* * * * *'});assert.equal((await app.db.prepare('SELECT COUNT(*) n FROM mentions').first()).n,0);
+});
+
+test('failed oldest source rotates attempts without renewing its verification lease',async(t)=>{
+ const remote={body:`<a href="${target}">reply</a>`};const app=await setup(remote);t.after(()=>app.mf.dispose());await app.receive();await app.moderate('approved');
+ const old=Math.floor(Date.now()/1000)-86000;await app.db.prepare('UPDATE mentions SET verified_at=?').bind(old).run();
+ await app.db.prepare("INSERT INTO mentions(source,target,state,fingerprint,verified_at,updated_at) SELECT 'https://reply.site/reply2',target,state,fingerprint,verified_at,updated_at FROM mentions WHERE source=?").bind(source).run();remote.fail=true;
+ const worker=await app.mf.getWorker();await worker.scheduled({scheduledTime:Date.now(),cron:'* * * * *'});assert.equal((await app.db.prepare('SELECT verified_at FROM mentions WHERE source=?').bind(source).first()).verified_at,old);
+ await worker.scheduled({scheduledTime:Date.now(),cron:'* * * * *'});assert.ok((await app.db.prepare('SELECT verified_at FROM mentions WHERE source=?').bind('https://reply.site/reply2').first()).verified_at>old);
+ assert.equal((await app.db.prepare('SELECT verified_at FROM mentions WHERE source=?').bind(source).first()).verified_at,old);
 });

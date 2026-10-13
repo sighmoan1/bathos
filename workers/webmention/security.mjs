@@ -4,7 +4,7 @@ export function publicURL(value) {
   if (typeof value !== "string" || !value) throw new HttpError(400, "Invalid URL");
   let url;
   try { url = new URL(value); } catch { throw new HttpError(400, 'Invalid URL'); }
-  if (value.length > 2048 || !['https:', 'http:'].includes(url.protocol) || url.username || url.password || url.port || url.hash || !url.hostname.includes('.') || url.hostname.endsWith('.')) throw new HttpError(400, 'Unsafe URL');
+  if (value.length > 2048 || url.href.length > 2048 || !['https:', 'http:'].includes(url.protocol) || url.username || url.password || url.port || url.hash || !url.hostname.includes('.') || url.hostname.endsWith('.')) throw new HttpError(400, 'Unsafe URL');
   const host = url.hostname.replace(/^\[|\]$/g, '');
   if (ipaddr.isValid(host) || /(?:^|\.)(localhost|local|internal|test|invalid|example)$/.test(host)) throw new HttpError(400, 'Unsafe host');
   return url;
