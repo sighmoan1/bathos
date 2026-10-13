@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{ title | escape }}</title>
+  <link rel="canonical" href="{{ canonical | escape }}">
+</head>
+<body>
+  <article class="h-entry">
+    <h1 class="p-name">{{ title | escape }}</h1>
+    <a class="u-url" href="{{ canonical | escape }}">Permalink</a>
+    <p>In reply to <a class="u-in-reply-to" href="{{ replyTo | escape }}">the original article</a>.</p>
+    <div class="e-content">{{ content | safe }}</div>
+  </article>
+</body>
+</html>
