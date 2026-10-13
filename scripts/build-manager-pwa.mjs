@@ -15,6 +15,8 @@ for (const asset of [...assets].filter(asset => asset.endsWith(".css"))) {
   }
 }
 const digest = createHash("sha256").update(html);
+// Refresh cached HTML when response security headers change, even if its body does not.
+digest.update(await fs.readFile("public/_headers"));
 for (const asset of [...assets].sort()) {
   if (asset !== "/manage/") digest.update(await fs.readFile(path.join(root, asset)));
 }
