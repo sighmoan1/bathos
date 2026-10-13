@@ -191,6 +191,7 @@ export const ArticleCard = forwardRef<HTMLDivElement, ArticleCardProps>(function
 
         {/* Card content - More compact layout */}
         <div className="reader-card-content flex flex-col p-5 short:p-3.5">
+          <div className="reader-card-body">
           {/* Tags */}
           {article.tags && article.tags.length > 0 && (
             <div className="reader-card-tags flex flex-wrap gap-1.5 mb-3 short:mb-2">
@@ -238,6 +239,8 @@ export const ArticleCard = forwardRef<HTMLDivElement, ArticleCardProps>(function
           )}
 
           {preview && <div className="reader-mobile-preview"><p>{preview.replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/[*_`]/g, "")}</p></div>}
+
+          </div>
 
           {/* Actions. The bin and bookmark buttons are the click-driven
               equivalent of swiping the card left and right. */}

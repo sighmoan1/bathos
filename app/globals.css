@@ -213,3 +213,32 @@ html.reader-phone { font-size: calc(16px * var(--reader-phone-scale, 1)); }
   .reader-phone .reader-description { font-size: .875rem; -webkit-line-clamp: 1; }
   .reader-phone .reader-card-actions button { min-height: 2.75rem; padding-block: .5rem; }
 }
+
+/* Reserve the reading action before allocating space to optional phone previews.
+   The feed has a fixed height; long summaries must not push actions below it. */
+.reader-phone .reader-card-content { height: 100%; min-height: 0; }
+.reader-phone .reader-card-tags, .reader-phone .reader-title, .reader-phone .reader-card-actions { flex-shrink: 0; }
+.reader-phone .reader-title { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+.reader-phone .reader-description { min-height: 0; -webkit-line-clamp: 3; }
+.reader-phone .reader-mobile-preview { flex: 1; min-height: 0; overflow: hidden; }
+.reader-phone .reader-card-actions { margin-top: auto; padding-top: .75rem; }
+@media (max-height: 500px) {
+  .reader-phone .reader-title { -webkit-line-clamp: 2; }
+  .reader-phone .reader-description { -webkit-line-clamp: 1; }
+  .reader-phone .reader-card-actions { padding-top: .25rem; }
+}
+
+.reader-card-body { display: contents; }
+.reader-phone .reader-card-body { display: block; flex: 1; min-height: 0; overflow-y: auto; }
+@media (max-height: 500px) {
+  .reader-phone .reader-header-row { flex-wrap: nowrap; gap: .25rem; }
+  .reader-phone .reader-header-row > div:first-child { gap: .25rem; }
+  .reader-phone .reader-header-row h1 { font-size: 1rem; }
+  .reader-phone .reader-header-tools { gap: 0; }
+  .reader-phone [data-reader-background] > header > div { padding-block: .125rem; }
+  .reader-phone [data-reader-background] > header > div > div:last-child:not(.reader-header-row) { padding-top: .125rem; }
+  .reader-phone .reader-deck { padding-block: .125rem; }
+  .reader-phone .reader-controls { padding-block: .125rem; }
+  .reader-phone .reader-card-content { padding-block: .125rem; }
+  .reader-phone .reader-card-actions { padding-top: 0; }
+}

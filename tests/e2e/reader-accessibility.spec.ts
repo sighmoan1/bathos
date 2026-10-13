@@ -1,4 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
+import fs from 'node:fs'
+import path from 'node:path'
 
 async function expectModal(page: Page, name: string) {
   const dialog = page.getByRole('dialog', { name, exact: true })
@@ -118,4 +120,38 @@ test('pointer swipes keep next, previous, save and hide behavior', async ({ page
   await expect(heading).not.toHaveText(hidden)
   await page.getByRole('button', { name: 'Open articles hidden on this device' }).click()
   await expect(page.getByRole('dialog').getByRole('button', { name: `Read ${hidden}`, exact: true })).toBeVisible()
+})
+
+
+test('every article keeps its full reading action visible with phone filters expanded', async ({ browser }) => {
+  const slugs = fs.readdirSync(path.join(process.cwd(), 'content')).filter(name => name.endsWith('.md')).map(name => name.slice(0, -3)).sort()
+  const cases = [
+    { viewport: { width: 390, height: 844 }, screen: { width: 390, height: 844 } },
+    { viewport: { width: 980, height: 2120 }, screen: { width: 390, height: 844 } },
+    { viewport: { width: 667, height: 375 }, screen: { width: 667, height: 375 } },
+    { viewport: { width: 667, height: 375 }, screen: { width: 390, height: 844 } },
+  ]
+  for (const { viewport, screen } of cases) {
+    const context = await browser.newContext({ viewport, screen, isMobile: true, hasTouch: true, reducedMotion: 'reduce' })
+    const page = await context.newPage()
+    await page.goto('/')
+    await expect(page.getByRole('button', { name: 'Read Article', exact: true })).toBeVisible()
+    for (const slug of slugs) {
+      await page.evaluate(({ slugs, slug }) => {
+        localStorage.setItem('swipe-reader-dismissed', JSON.stringify(slugs.filter(other => other !== slug)))
+        localStorage.setItem('swipe-reader-tags', '[]')
+      }, { slugs, slug })
+      await page.reload()
+      await expect(page.locator('.reader-title a')).toHaveAttribute('href', `/posts/${encodeURIComponent(slug)}/`)
+      await page.getByRole('button', { name: 'Filter by tag' }).click()
+      await expect(page.locator('.reader-tag-filter')).toBeVisible()
+      const action = page.getByRole('button', { name: 'Read Article', exact: true })
+      await expect(action, `${slug} at ${viewport.width}x${viewport.height}`).toBeInViewport({ ratio: 1 })
+      const bounds = await action.boundingBox()
+      const surface = await page.locator('.reader-card-surface').boundingBox()
+      expect(bounds!.y, `${slug}: action top within card`).toBeGreaterThanOrEqual(surface!.y)
+      expect(bounds!.y + bounds!.height, `${slug}: action bottom within card`).toBeLessThanOrEqual(surface!.y + surface!.height + 1)
+    }
+    await context.close()
+  }
 })
