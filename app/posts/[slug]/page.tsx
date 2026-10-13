@@ -41,7 +41,7 @@ export default async function Post({ params }: Props) {
           <p className="mt-4"><a className="text-accent underline" href="/articles/">Browse all articles</a></p>
         </main>
       </noscript>
-      <div data-swipe-reader><SwipeFeed initialArticles={articles} allTags={getAllTags(articles)} initialReadingArticle={article} /></div>
+      <div data-swipe-reader className="contents"><SwipeFeed initialArticles={articles} allTags={getAllTags(articles)} initialReadingArticle={article} /></div>
     </>
   )
 }

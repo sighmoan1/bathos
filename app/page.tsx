@@ -15,7 +15,7 @@ export default function Home() {
           <p className="mt-4"><a className="text-accent underline" href="/articles/">Browse all articles</a> and read them without JavaScript.</p>
         </main>
       </noscript>
-      <div data-swipe-reader><SwipeFeed initialArticles={shuffledArticles} allTags={allTags} /></div>
+      <div data-swipe-reader className="contents"><SwipeFeed initialArticles={shuffledArticles} allTags={allTags} /></div>
     </>
   )
 }
