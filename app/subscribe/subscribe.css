@@ -17,3 +17,12 @@
 .subscription-page :focus-visible { outline: 3px solid var(--bathos-color-focus); outline-offset: 3px; }
 @media (max-width: 600px) { .subscription-page { padding-left: 16px; padding-right: 16px; } .subscription-page header { margin-top: 24px; } .subscription-options { grid-template-columns: 1fr; } .subscription-rss-only { grid-template-columns: 1fr; max-width: 540px; }
 .subscription-options section { padding: 24px; } }
+.subscription-button:disabled { opacity: .5; cursor: default; }
+.email-subscription .subscription-button { width: 100%; border: 0; font: inherit; cursor: pointer; }
+.subscription-challenge { margin-top: 16px; min-height: 140px; }
+.subscription-error { color: var(--bathos-color-danger) !important; }
+.subscription-success { color: var(--bathos-color-text) !important; }
+@media (max-width: 360px) {
+ .subscription-options section { padding: 16px; }
+ .subscription-challenge { margin-left: -8px; margin-right: -8px; }
+}
