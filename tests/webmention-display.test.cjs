@@ -18,5 +18,7 @@ test('remote content remains bounded plain text and invalid dates are omitted', 
   assert.equal(result[0].name, '<script>hi</script>');
   assert.equal(result[0].author.length, 100);
   assert.equal(result[0].published, undefined);
+  const longDate = verifiedResponses({responses:[{source:'https://example.org/reply', target, published:'2026-10-13T10:00:00Z' + ' '.repeat(1000)}]}, target);
+  assert.equal(longDate[0].published, undefined);
   assert.throws(() => verifiedResponses({responses: null}, target));
 });

@@ -22,7 +22,7 @@ export function verifiedResponses(payload: unknown, target: string): WebmentionR
     if (row.status !== undefined && row.status !== "approved") return []
     seen.add(source.href)
     const plain = (text: unknown, limit: number) => typeof text === "string" ? text.replace(/[\u0000-\u001f\u007f]/g, "").slice(0, limit) : ""
-    const published = typeof row.published === "string" && /^\d{4}-\d{2}-\d{2}T/.test(row.published) && Number.isFinite(Date.parse(row.published)) ? row.published : undefined
+    const published = typeof row.published === "string" && row.published.length <= 40 && /^\d{4}-\d{2}-\d{2}T/.test(row.published) && Number.isFinite(Date.parse(row.published)) ? row.published : undefined
     return [{ source: source.href, target, name: plain(row.name, 200) || source.hostname, author: plain(row.author, 100) || undefined, published }]
   })
 }
