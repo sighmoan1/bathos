@@ -5,6 +5,7 @@ test('exported discovery catalog, sitemap, robots and RSS agree on every post',a
  await page.goto('/')
  await expect(page.locator('link[rel=alternate][type="application/json"]')).toHaveAttribute('href','https://bathos.org/articles.json')
  await expect(page.locator('link[rel=sitemap]')).toHaveAttribute('href','https://bathos.org/sitemap.xml')
+ await expect(page.locator('link[rel=describedby][type="application/json"]')).toHaveAttribute('href','https://bathos.org/articles.json')
  const catalogResponse=await page.request.get('/articles.json')
  expect(catalogResponse.ok()).toBe(true)
  const catalog=await catalogResponse.json()
@@ -34,6 +35,9 @@ test('exported discovery catalog, sitemap, robots and RSS agree on every post',a
   const response=await page.request.get(new URL(article.canonicalUrl).pathname)
   expect(response.ok()).toBe(true)
  }
+ await page.goto(new URL(catalog.articles[0].canonicalUrl).pathname)
+ await expect(page.locator('link[rel=canonical]')).toHaveAttribute('href',catalog.articles[0].canonicalUrl)
+ await expect(page.locator('link[rel=describedby][type="application/json"]')).toHaveAttribute('href','https://bathos.org/articles.json')
  const robots=await page.request.get('/robots.txt')
  expect(robots.ok()).toBe(true)
  expect(await robots.text()).toContain('Sitemap: https://bathos.org/sitemap.xml')

@@ -11,7 +11,7 @@
 
 Articles sort by slug using code-point comparison. No build timestamps, randomized order, private content or admin endpoints appear in the catalog. Consumers should ignore unknown fields; incompatible schema changes require a new version.
 
-`/sitemap.xml` includes the public homepage, the semantic `/articles/` index and every canonical post once. It omits `lastmod`: publication date is not a known modification date. `/robots.txt` links the sitemap and asks crawlers to avoid `/admin/` and `/manage/`; robots is discovery guidance, not access control. HTML metadata advertises RSS, the JSON catalog and sitemap. Existing RSS functionality remains unchanged; no duplicate Atom feed is needed.
+`/sitemap.xml` includes the public homepage, the semantic `/articles/` index and every canonical post once. It omits `lastmod`: publication date is not a known modification date. `/robots.txt` links the sitemap and asks crawlers to avoid `/admin/` and `/manage/`; robots is discovery guidance, not access control. HTML metadata advertises RSS, the JSON catalog and sitemap. A global `rel="describedby"` JSON link survives canonical metadata overrides on article pages, so agents arriving directly from the sitemap or RSS can still discover the full catalog. Existing RSS functionality remains unchanged; no duplicate Atom feed is needed.
 
 Cloudflare Pages `_headers` assigns explicit UTF-8 content types and `max-age=0, must-revalidate` for catalog, sitemap and robots. Publishing rebuilds these static outputs automatically without changing the publishing workflow.
 
