@@ -13,7 +13,13 @@ One conversation was working on webmentions infrastructure: making it possible f
 
 I'd already written [Multiple agents the easy way](/posts/multi-agent-easy/) about using GitHub issues, worktrees and `AGENTS.md` to coordinate coding agents. The repository had those conventions. What I hadn't done was establish an orchestration layer *between the two conversations*.
 
-ChatGPT noticed the overlapping work and asked for permission to coordinate across chats. I authorised it. Then a message appeared in the other conversation with the heading **“Sent by ChatGPT from another task.”**
+ChatGPT noticed the overlapping work and asked for permission to coordinate across chats.
+
+![ChatGPT asks permission to coordinate merge timing with other Bathos chats, offering direct chat coordination or keeping coordination in GitHub issues and pull requests\.](/images/posts/multi-agent-agentic-way/orchestration-permission.png)
+
+*ChatGPT offering to coordinate overlapping Bathos releases on 13 October 2026, while asking for explicit permission to message the other chats\.*
+
+I authorised it. Then a message appeared in the other conversation with the heading **“Sent by ChatGPT from another task.”**
 
 This wasn't advice to me about what to copy and paste. It was a message from one task to another.
 
