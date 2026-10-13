@@ -23,8 +23,9 @@ export function WebmentionAdoptionLink({ targetUrl }: WebmentionAdoptionLinkProp
       {receiver && (
         <p className="mt-2 text-muted-foreground">
           <a rel="webmention" href={receiver} className="underline underline-offset-4 hover:text-foreground">
-            Webmention receiver
+            Webmention receiver (for sending tools)
           </a>
+          . Use the reply guide above to submit in your browser.
         </p>
       )}
       <p className="mt-2 text-muted-foreground">

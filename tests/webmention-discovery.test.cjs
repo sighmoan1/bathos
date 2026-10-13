@@ -39,11 +39,12 @@ test('only explicitly configured same-origin receiver paths are advertised', () 
   const targetUrl = 'https://bathos.org/posts/Gassing/';
   const configured = renderToStaticMarkup(loadComponent('/api/webmention')({ targetUrl }));
   assert.match(configured, /<a rel="webmention" href="\/api\/webmention"/);
-  assert.match(configured, />Webmention receiver<\/a>/);
+  assert.match(configured, />Webmention receiver \(for sending tools\)<\/a>/);
+  assert.match(configured, /Use the reply guide above to submit in your browser\./);
   assert.match(configured, /Webmention reply guide/);
   for (const endpoint of [undefined, '', '/', '//evil.test/receiver', 'https://evil.test/receiver', 'javascript:alert(1)', '/api/webmention?redirect=evil', '/api/webmention#fragment', '/api\\webmention', '/api webmention']) {
     const html = renderToStaticMarkup(loadComponent(endpoint)({ targetUrl }));
-    assert.doesNotMatch(html, /rel="webmention"|>Webmention receiver<\/a>/);
+    assert.doesNotMatch(html, /rel="webmention"|Webmention receiver \(for sending tools\)/);
     assert.match(html, /Webmention reply guide/);
   }
 });
