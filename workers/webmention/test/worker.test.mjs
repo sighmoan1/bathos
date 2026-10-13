@@ -25,6 +25,7 @@ async function setup(html=`<title>A reply</title><a href="${target}">Bathos</a>`
 test('rejects unsafe URL schemes, credentials, ports, literals and reserved hosts',()=>{
  for (const url of [null,'','ftp://reply.site/x','https://u:p@reply.site/x','https://reply.site:8443/x','http://127.0.0.1','http://2130706433','https://[::1]/','https://[::ffff:127.0.0.1]/','http://metadata.internal/x','https://reply.site/x#fragment']) assert.throws(()=>publicURL(url));
  for (const ip of ['127.0.0.1','10.0.0.1','169.254.169.254','172.16.0.1','192.168.1.1','0.0.0.0','::1','fe80::1','fc00::1','::ffff:127.0.0.1','2001:db8::1']) assert.equal(publicIP(ip),false,ip);
+ assert.throws(()=>publicURL('https://reply.site/'+ '😀'.repeat(200)),/Unsafe URL/);
  assert.equal(publicIP('93.184.216.34'),true);
 });
 test('caps streamed bodies without Content-Length',async()=>{await assert.rejects(()=>boundedText(new Response('abcdef'),4),/Body too large/);});
