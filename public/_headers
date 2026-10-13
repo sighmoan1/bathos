@@ -2,8 +2,19 @@
   Cache-Control: no-cache, no-store, must-revalidate
 /manage/
   Cache-Control: no-cache, must-revalidate
+/manage
+  Content-Security-Policy: frame-ancestors 'none'
+  X-Frame-Options: DENY
+/manage/*
+  Content-Security-Policy: frame-ancestors 'none'
+  X-Frame-Options: DENY
+/admin
+  Content-Security-Policy: frame-ancestors 'none'
+  X-Frame-Options: DENY
 /admin/*
   Cache-Control: no-cache, must-revalidate
+  Content-Security-Policy: frame-ancestors 'none'
+  X-Frame-Options: DENY
 
 /sw.js
   Cache-Control: no-cache, no-store, must-revalidate
