@@ -54,8 +54,8 @@ test('both article loaders carry reply metadata and reject invalid frontmatter',
 test('initial reader HTML contains one entry, canonical encoded permalink and escaped reply links', () => {
   const { ArticleReader } = load('components/article-reader.tsx', {
     'react-markdown': ({children}) => React.createElement('p', null, children),
-    'framer-motion': {motion: {div: ({initial, animate, exit, ...props}) => React.createElement('div', {...props, style: initial === false ? undefined : {opacity: initial.opacity}})}},
-    '@/lib/use-feed-controls': {useEscapeKey: () => {}},
+    'framer-motion': {useReducedMotion: () => false, motion: {div: ({initial, animate, exit, ...props}) => React.createElement('div', {...props, style: initial === false ? undefined : {opacity: initial.opacity}})}},
+    '@/lib/use-reader-dialog': {useReaderDialog: () => ({ref: null, titleId: 'reply-title', present: true})},
     './share-button': {ShareButton: () => null},
   });
   const target = 'https://example.com/post?title=%3Cscript%3E&next=%22quoted%22';
