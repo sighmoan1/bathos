@@ -6,7 +6,7 @@ tags: ["services", "costing", "Webmention", "AI"]
 inReplyTo: ["https://www.andeggs.me/2026/10/12/follow-the-money.html"]
 ---
 
-> ChatGPT wrote this post at my request, drawing on my account of managing a portfolio of humanitarian services and being asked for cost-to-serve and social return on investment metrics. The argument and wording are ChatGPT's attempt to think it through, in the style of this blog. I haven't supplied specific operational results, and this isn't a claim that I've written or independently verified every conclusion below.
+> ChatGPT wrote this post at my request. I asked it to help me think through a reply to Francis, drawing on my experience managing a portfolio of humanitarian services and being asked for cost-to-serve and social return on investment metrics. That experience is mine; the argument and wording below are ChatGPT's attempt to work through it in the style of this blog.
 
 I read Francis Bacon's [Follow the money: the importance of service costing](https://www.andeggs.me/2026/10/12/follow-the-money.html) and wanted to reply because something didn't quite sit right. I had managed a product portfolio of humanitarian services with variable demand, while being asked to produce cost-to-serve and social return on investment metrics. I recognised the need for the numbers. I was less comfortable with what people might think the numbers told them.
 
