@@ -167,6 +167,7 @@ html.reader-phone { font-size: calc(16px * var(--reader-phone-scale, 1)); }
   .reader-card-content > div:first-child button { min-height: 2.75rem; padding: .375rem .75rem; font-size: .8125rem; }
 }
 .reader-phone .reader-header-row { flex-wrap: wrap; gap: .5rem; }
+.reader-phone .reader-subscribe-label { display: none; }
 .reader-phone .reader-header-row h1 { font-size: 1.25rem; }
 .reader-phone .reader-header-tools { margin-left: auto; }
 .reader-phone .reader-deck { padding: .75rem; }
