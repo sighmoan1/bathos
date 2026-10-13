@@ -1,0 +1,84 @@
+name: Bathos infrastructure - GitOps
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - infrastructure/digitalocean/**
+      - .github/workflows/infrastructure.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bathos-infrastructure
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    if: vars.BATHOS_INFRA_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: infrastructure/digitalocean
+    env:
+      DIGITALOCEAN_TOKEN: ${{ secrets.DIGITALOCEAN_TOKEN }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.DO_SPACES_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.DO_SPACES_SECRET_KEY }}
+      TF_VAR_admin_ssh_key_ids: ${{ vars.BATHOS_ADMIN_SSH_KEY_IDS_JSON }}
+      TF_VAR_deploy_public_key: ${{ vars.BATHOS_DEPLOY_PUBLIC_KEY }}
+      TF_IN_AUTOMATION: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install OpenTofu
+        uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: 1.10.6
+      - name: Configure remote state and validate inputs
+        env:
+          STATE_BUCKET: ${{ vars.BATHOS_STATE_BUCKET }}
+          STATE_REGION: ${{ vars.BATHOS_SPACES_REGION }}
+        run: |
+          set -euo pipefail
+          [[ "$STATE_BUCKET" =~ ^[a-z0-9][a-z0-9.-]{2,62}$ ]]
+          [[ "$STATE_REGION" =~ ^[a-z0-9]+[0-9]+$ ]]
+          test -n "$DIGITALOCEAN_TOKEN"
+          test -n "$AWS_ACCESS_KEY_ID"
+          test -n "$AWS_SECRET_ACCESS_KEY"
+          test -n "$TF_VAR_deploy_public_key"
+          test -n "$TF_VAR_admin_ssh_key_ids"
+          cat > "$RUNNER_TEMP/backend.hcl" <<EOF
+          bucket = "$STATE_BUCKET"
+          key = "bathos/platform.tfstate"
+          region = "us-east-1"
+          endpoints = { s3 = "https://$STATE_REGION.digitaloceanspaces.com" }
+          skip_credentials_validation = true
+          skip_metadata_api_check = true
+          skip_region_validation = true
+          skip_requesting_account_id = true
+          EOF
+      - run: tofu fmt -check
+      - name: Initialise state
+        run: tofu init -input=false -backend-config="$RUNNER_TEMP/backend.hcl"
+      - run: tofu validate
+      - name: Plan changes
+        run: tofu plan -input=false -out="$RUNNER_TEMP/plan.tfplan"
+      - name: Reject deletion/replacement of infrastructure
+        run: |
+          set -euo pipefail
+          tofu show -json "$RUNNER_TEMP/plan.tfplan" > "$RUNNER_TEMP/plan.json"
+          python3 - "$RUNNER_TEMP/plan.json" <<'PY'
+          import json,sys
+          plan=json.load(open(sys.argv[1]))
+          destructive=[]
+          for r in plan.get('resource_changes',[]):
+            acts=r.get('change',{}).get('actions',[])
+            if 'delete' in acts:
+              destructive.append((r.get('address'),acts))
+          if destructive:
+            raise SystemExit('Refusing automatic destruction/replacement: '+str(destructive))
+          PY
+      - name: Apply non-destructive infrastructure changes
+        run: tofu apply -input=false "$RUNNER_TEMP/plan.tfplan"
