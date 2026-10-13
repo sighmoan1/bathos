@@ -148,7 +148,7 @@ test('bookmark count matches available saved articles after posts are removed', 
   await page.reload()
   await expect(savedButton.locator('span')).toHaveText('1')
   await savedButton.click()
-  await expect(page.getByRole('heading', { level: 3 })).toHaveText(title!)
+  await expect(page.getByRole('button', { name: `Read ${title}`, exact: true })).toHaveCount(1)
   await page.getByRole('button', { name: `Remove from saved: ${title}` }).click()
   await expect(page.getByText('No saved articles yet', { exact: true })).toBeVisible()
   await expect(savedButton.locator('span')).toHaveCount(0)
