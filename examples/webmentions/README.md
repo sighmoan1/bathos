@@ -76,4 +76,9 @@ the Liquid template and an actual Eleventy Markdown/Nunjucks build without addin
 production dependencies, install `liquidjs` and `@11ty/eleventy` in a temporary
 directory and run with `WEBMENTION_EXAMPLE_ENGINES=/absolute/path/to/that/directory`.
 The Liquid test supplies Jekyll's `absolute_url` behavior; it is not a full Jekyll
-site build. The tests make no real Webmention submissions.
+site build. Set `WEBMENTION_JEKYLL_EXE` to an installed Jekyll executable (and
+`WEBMENTION_JEKYLL_RUBY` if needed) to run the complete Jekyll fixture build test.
+Use your normal Ruby gem environment. The fixture was also validated with a real
+Jekyll 3.9.5 Markdown build and a complete Next.js 16 static export; both generated
+the canonical URL and backlink in `/reply/index.html`. The tests make no real
+Webmention submissions.

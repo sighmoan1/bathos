@@ -36,6 +36,20 @@ test('Next.js server component actually renders reply metadata and exposes canon
 // Optional engines keep this educational example from adding production dependencies.
 // Set WEBMENTION_EXAMPLE_ENGINES to an installation containing liquidjs and @11ty/eleventy.
 const engines = process.env.WEBMENTION_EXAMPLE_ENGINES
+test('Jekyll builds the complete Markdown fixture with canonical and reply permalink', { skip: !process.env.WEBMENTION_JEKYLL_EXE }, () => {
+  const { execFileSync } = require('node:child_process')
+  const output = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'bathos-jekyll-fixture-'))
+  try {
+    execFileSync(process.env.WEBMENTION_JEKYLL_RUBY || 'ruby', [process.env.WEBMENTION_JEKYLL_EXE, 'build', '--source', path.join(root, 'jekyll'), '--destination', output], { stdio: 'pipe' })
+    const html = fs.readFileSync(path.join(output, 'reply/index.html'), 'utf8')
+    checkReply(html)
+    assert.ok(html.includes(`<link rel="canonical" href="${source}">`))
+    assert.match(html, /<p>Write your considered response here\.<\/p>/)
+  } finally {
+    fs.rmSync(output, { recursive: true, force: true })
+  }
+})
+
 test('Jekyll-compatible Liquid renders escaped reply fields', { skip: !engines }, async () => {
   const { Liquid } = require(path.join(engines, 'node_modules/liquidjs'))
   const liquid = new Liquid()
