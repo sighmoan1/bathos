@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
+import { randomUUID } from 'node:crypto';
 import sharp from 'sharp';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -79,12 +80,16 @@ export async function addImage(options, repositoryRoot = root) {
   }
   await fs.mkdir(directory, { recursive: true });
   await fs.writeFile(destination, bytes, { flag: 'wx' });
+  const temporaryArticle = `${articlePath}.${randomUUID()}.tmp`;
   try {
+    await fs.writeFile(temporaryArticle, updated, { flag: 'wx', mode: (await fs.stat(articlePath)).mode });
     if (await fs.readFile(articlePath, 'utf8') !== article) throw new Error('Article changed while processing; retry with the latest version.');
-    await fs.writeFile(articlePath, updated);
+    await fs.rename(temporaryArticle, articlePath);
   } catch (error) {
     await fs.unlink(destination);
     throw error;
+  } finally {
+    await fs.rm(temporaryArticle, { force: true });
   }
   return { destination, articlePath, markdown, width: metadata.width, height: metadata.height };
 }

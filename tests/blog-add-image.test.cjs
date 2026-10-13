@@ -35,6 +35,18 @@ test('no caption appends Markdown; existing assets are never overwritten', async
   assert.equal(await fs.readFile(result.articlePath, 'utf8'), 'Original.\n');
 });
 
+for (const [extension, format] of [['jpg', 'jpeg'], ['jpeg', 'jpeg'], ['webp', 'webp'], ['gif', 'gif']]) {
+  test(`accepts a genuine still ${extension} image`, async t => {
+    const { root, file, addImage, options } = await fixture(t);
+    const source = path.join(root, `source.${extension}`);
+    await sharp(file).toFormat(format).toFile(source);
+    const result = await addImage({ ...options, file: source }, root);
+    assert.deepEqual(await fs.readFile(result.destination), await fs.readFile(source));
+    assert.ok(result.markdown.includes(`/example.${extension})`));
+    assert.equal((await fs.readdir(path.join(root, 'content'))).filter(name => name.endsWith('.tmp')).length, 0);
+  });
+}
+
 test('rejects unsafe names, absent alt, missing or duplicate headings and symlink destinations without changing article', async t => {
   const { root, addImage, options } = await fixture(t);
   const article = path.join(root, 'content/Gassing.md');
