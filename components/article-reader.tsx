@@ -87,7 +87,7 @@ export function ArticleReader({ article, onClose, onSave, onDismiss, onTagClick 
           </p>
         )}
 
-        <div className="prose prose-invert max-w-none prose-headings:text-foreground prose-p:text-muted-foreground prose-strong:text-foreground prose-code:text-accent prose-pre:bg-secondary prose-pre:border prose-pre:border-border">
+        <div className="article-prose">
           <ReactMarkdown>{article.content}</ReactMarkdown>
         </div>
       </article>
