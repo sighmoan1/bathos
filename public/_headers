@@ -12,3 +12,9 @@
   Cache-Control: no-cache, must-revalidate
 /
   Cache-Control: no-cache, must-revalidate
+
+/rss.xml
+  Content-Type: application/rss+xml; charset=utf-8
+  Cache-Control: public, max-age=0, must-revalidate
+/subscribe/
+  Cache-Control: no-cache, must-revalidate

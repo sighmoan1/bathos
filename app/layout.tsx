@@ -7,6 +7,7 @@ import "./globals.css"
 export const metadata: Metadata = {
   title: "Bathos Reader",
   description: "Swipe through Bathos articles, save your favourites and read offline.",
+  alternates: { types: { "application/rss+xml": "https://bathos.org/rss.xml" } },
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, title: "Bathos", statusBarStyle: "black-translucent" },
   icons: { icon: [{ url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }], apple: [{ url: "/icons/apple-icon.png", sizes: "180x180", type: "image/png" }] },

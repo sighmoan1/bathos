@@ -1,0 +1,19 @@
+.subscription-surface { min-height: 100dvh; background: var(--bathos-color-background); }
+.subscription-page { min-height: 100dvh; max-width: 880px; margin: auto; padding: calc(28px + env(safe-area-inset-top)) 24px calc(40px + env(safe-area-inset-bottom)); color: var(--bathos-color-text); font-family: var(--bathos-font-body); }
+.subscription-back { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; text-decoration: none; }
+.subscription-page header { margin: 40px 0 32px; }
+.subscription-eyebrow { font-size: 11px; letter-spacing: .16em; }
+.subscription-page h1 { font-size: clamp(34px, 7vw, 56px); line-height: 1.12; font-weight: 400; letter-spacing: -.04em; margin: 16px 0; }
+.subscription-page p { line-height: 1.65; color: var(--bathos-color-text-muted); }
+.subscription-options { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.subscription-rss-only { grid-template-columns: 1fr; max-width: 540px; }
+.subscription-options section { min-width: 0; padding: 28px; border: 1px solid var(--bathos-color-divider); border-radius: var(--bathos-radius-large); background: var(--bathos-color-surface); }
+.subscription-options h2 { font-size: 24px; font-weight: 500; margin: 16px 0 12px; }
+.subscription-button { display: flex; align-items: center; justify-content: center; min-height: 48px; margin: 24px 0 16px; padding: 12px; border-radius: var(--bathos-radius-medium); text-decoration: none; background: var(--bathos-color-text); color: var(--bathos-color-text-inverse); font-weight: 600; }
+.subscription-secondary { background: var(--bathos-color-surface-muted); color: var(--bathos-color-text); border: 1px solid var(--bathos-color-divider); }
+.subscription-page .subscription-note { font-size: 13px; }
+.subscription-options label { display: block; font-size: 13px; margin: 20px 0 8px; }
+.subscription-options input { width: 100%; min-width: 0; min-height: 48px; padding: 10px; font-size: 16px; border: 1px solid var(--bathos-color-divider); border-radius: 8px; background: var(--bathos-color-background); color: inherit; }
+.subscription-page :focus-visible { outline: 3px solid var(--bathos-color-focus); outline-offset: 3px; }
+@media (max-width: 600px) { .subscription-page { padding-left: 16px; padding-right: 16px; } .subscription-page header { margin-top: 24px; } .subscription-options { grid-template-columns: 1fr; } .subscription-rss-only { grid-template-columns: 1fr; max-width: 540px; }
+.subscription-options section { padding: 24px; } }
