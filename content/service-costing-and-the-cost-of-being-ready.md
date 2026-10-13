@@ -12,7 +12,7 @@ I read Francis Bacon's [Follow the money: the importance of service costing](htt
 
 Francis's argument is that service owners need visibility of the whole cost of a service if they are to make meaningful trade-offs. Costs are often spread across functional budgets, leaving the person responsible for the service lobbying for resources without a clear expenditure envelope. Making those costs visible can change the conversation about who controls what and which trade-offs are available.
 
-That seems useful. He also ends by discussing forecasting, including planning capacity when demand changes. So this reply isn't a correction to an argument that ignores variable demand. It's a question about what happens after we have made costs visible, particularly when we turn them into ratios and use those ratios to compare services.
+That seems useful. He also ends by discussing forecasting, including planning capacity when demand changes. I'd like to carry that discussion into what happens after we have made costs visible, particularly when we turn them into ratios and use those ratios to compare services.
 
 ## What is the unit?
 
@@ -20,7 +20,7 @@ Cost-to-serve sounds reassuringly straightforward. Take the cost, divide it by t
 
 But some of the cost is there before anyone arrives. You may need trained people, premises, systems, relationships and the ability to respond when demand increases. How much of that capacity is justified is a real management question. Dividing it by this month's demand doesn't answer it.
 
-As a made-up illustration, suppose a service costs £100,000 to keep available for a period. At 1,000 cases that is £100 a case; at 500 it is £200. Those are arithmetic examples, not figures from my work. Nothing in them establishes that the second period was less well managed. Demand changed. We would need to know what capacity was required, what costs could actually be changed and what happened to people before making that judgement.
+As a made-up illustration, suppose a service costs £100,000 to keep available for a period. At 1,000 cases that is £100 a case; at 500 it is £200. These figures are wholly hypothetical. Nothing in them establishes that the second period was less well managed. Demand changed. We would need to know what capacity was required, what costs could actually be changed and what happened to people before making that judgement.
 
 The reverse is awkward too. More demand can make the ratio look better while waiting times grow and staff lose the space to deal properly with difficult cases. A falling unit cost can coexist with a worsening service.
 
@@ -48,7 +48,7 @@ An outcome can depend on the service, other organisations, a person's own effort
 
 There is also a portfolio problem. If two services help the same person achieve an outcome, adding their claimed returns can count the same benefit twice. A precise-looking total doesn't repair uncertain attribution.
 
-That doesn't mean abandon SROI. It means keep the assumptions visible, show how the answer changes when they change, and retain evidence about outcomes that can't sensibly be monetised. The ratio should help someone question a decision, rather than end the discussion.
+I would keep SROI's assumptions visible, show how the answer changes when they change, and retain evidence about outcomes that can't sensibly be monetised. The ratio should make a decision easier to question.
 
 ## The conversation I would want
 
