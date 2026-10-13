@@ -18,3 +18,13 @@
   Cache-Control: public, max-age=0, must-revalidate
 /subscribe/
   Cache-Control: no-cache, must-revalidate
+
+/articles.json
+  Content-Type: application/json; charset=utf-8
+  Cache-Control: public, max-age=0, must-revalidate
+/sitemap.xml
+  Content-Type: application/xml; charset=utf-8
+  Cache-Control: public, max-age=0, must-revalidate
+/robots.txt
+  Content-Type: text/plain; charset=utf-8
+  Cache-Control: public, max-age=0, must-revalidate
