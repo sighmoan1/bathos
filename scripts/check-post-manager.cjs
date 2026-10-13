@@ -85,8 +85,58 @@ async function main() {
   const browser = await chromium.launch();
   try {
     for (const width of [320, 375, 390]) await mobileFlow(browser, origin, width);
+    await checkedPublishingFlow(browser, origin);
     await offlineShell(browser, origin);
   } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }
+}
+async function checkedPublishingFlow(browser, origin) {
+  const context = await browser.newContext({ viewport: { width: 390, height: 812 }, serviceWorkers: 'block' });
+  const page = await context.newPage();
+  let state = 'pending', saved, submissions = 0, polls = 0;
+  const commitSha = 'f'.repeat(40);
+  await context.route('**/api/**', async route => {
+    const request = route.request(), pathname = new URL(request.url()).pathname;
+    const json = body => route.fulfill({ contentType: 'application/json', body: JSON.stringify(body) });
+    if (pathname === '/api/session') return json({ authenticated: true, user: { login: 'writer' } });
+    if (pathname === '/api/posts' && request.method() === 'GET') return json({ posts: state === 'success' ? [saved] : [] });
+    if (pathname === '/api/posts' && request.method() === 'POST') {
+      submissions++; saved = { ...request.postDataJSON(), sha: 'e'.repeat(40) };
+      return json({ post: saved, commitSha, publication: { number: 13, url: 'https://github.com/sighmoan1/bathos/pull/13', queued: true } });
+    }
+    if (pathname === '/api/publication/13') {
+      polls++; assert.equal(request.method(), 'POST');
+      return json({ state, merged: state === 'success', message: state === 'failure' ? 'Publishing checks failed. Your changes are saved in GitHub and your draft is kept.' : 'Your post is saved. Publishing automatically after checks pass…' });
+    }
+    return json({ error: 'Unexpected request' });
+  });
+  await page.goto(origin + '/manage/');
+  await page.getByRole('button', { name: 'New post', exact: true }).click();
+  await page.getByLabel('Title', { exact: true }).fill('Checked publication');
+  await page.getByLabel('Description', { exact: true }).fill('Published only after CI passes');
+  await page.getByLabel('Your writing').fill('A safe queued post');
+  await page.getByRole('button', { name: 'Save to site', exact: true }).click();
+  await page.getByRole('link', { name: 'View publishing progress' }).waitFor();
+  assert.equal(await page.getByRole('button', { name: 'Save to site', exact: true }).isDisabled(), true);
+  assert.equal(await page.getByRole('button', { name: 'Delete post', exact: true }).isDisabled(), true);
+  assert.equal(submissions, 1);
+  assert.ok(await page.evaluate(() => !!localStorage.getItem('bathos:post-draft:checked-publication')));
+  assert.ok(await page.evaluate(() => !!localStorage.getItem('bathos:pending-publication')));
+  await page.reload();
+  await page.getByRole('link', { name: 'View publishing progress' }).waitFor();
+  await until(() => polls >= 2, 'pending publication did not resume after reload');
+  state = 'failure';
+  await page.reload();
+  await page.getByText('Publishing checks failed. Your changes are saved in GitHub and your draft is kept.', { exact: true }).waitFor();
+  assert.equal(submissions, 1);
+  state = 'success';
+  await page.reload();
+  await page.getByText('Published. Your changes are live on Bathos.', { exact: true }).waitFor();
+  await page.getByRole('heading', { name: 'Checked publication', exact: true }).waitFor();
+  await until(() => true, 'publication complete');
+  assert.equal(await page.evaluate(() => localStorage.getItem('bathos:pending-publication')), null);
+  assert.equal(submissions, 1);
+  await context.close();
+  console.log('PASS checked publishing: one PR submission, pending Save/Delete guard, retained draft, reload recovery, failed checks, successful production confirmation');
 }
 async function mobileFlow(browser, origin, width) {
   const context = await browser.newContext({ viewport: { width, height: 812 }, serviceWorkers: 'block' });
