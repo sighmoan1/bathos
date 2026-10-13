@@ -93,3 +93,27 @@ test('CLI built reply target selection, state dedup and explicit resend',async (
     await assert.rejects(main(['--source',source,'--page',page,'--wat'],{transport}),/Unknown/);
   } finally {await fs.rm(dir,{recursive:true,force:true});}
 });
+test('fragment backlinks identify the target document without changing query or endpoint discovery',async()=>{
+  const {sendWebmention}=await load();const normal=mockTransport(202,response('<a rel=webmention href="/inbox?key=a&amp;b=c#form">'));
+  const fragmentTransport=async(url,options)=>url===source?response(`<base href="https://example.org/"><a href="post?a=1&amp;b=2#section">Reply to section</a>`,source):normal(url,options);
+  const result=await sendWebmention({source,target:`${target}#section`,transport:fragmentTransport});
+  assert.equal(result.status,'accepted');assert.equal(result.target,target);assert.equal(result.endpoint,'https://example.org/inbox?key=a&b=c');
+  assert.equal(normal.calls[0].url,target);assert.equal(new URLSearchParams(normal.calls[1].body).get('target'),target);
+  for(const html of [`<a href="https://example.org/other?a=1&amp;b=2#section">Different path</a>`,`<a href="https://example.org/post?a=1&amp;b=3#section">Different query</a>`,`<img src="${target}#section"><script>const fake='<a href="${target}#section">';</script>`]) {
+    const calls=[];await assert.rejects(sendWebmention({source,target:`${target}#section`,transport:async url=>{calls.push(url);return response(html,source);}}),/does not link/);assert.deepEqual(calls,[source]);
+  }
+});
+test('CLI --page sends fragment reply links once per document and retains target query',async()=>{
+  const {main}=await load();const fs=require('node:fs/promises'),path=require('node:path'),os=require('node:os');
+  const dir=await fs.mkdtemp(path.join(os.tmpdir(),'bathos-fragment-test-'));
+  try {
+    const page=path.join(dir,'reply.html'),state=path.join(dir,'sent.json');
+    const html=`<a class=u-in-reply-to href="${target.replaceAll('&','&amp;')}#one">One</a><a class=u-in-reply-to href="${target.replaceAll('&','&amp;')}#two">Two</a>`;
+    await fs.writeFile(page,html);const normal=mockTransport();let sourceReads=0;
+    const transport=async(url,options)=>{if(url===source){sourceReads++;return response(html,source);}return normal(url,options);};
+    await main(['--source',source,'--page',page,'--state',state],{transport});
+    assert.equal(sourceReads,1);assert.equal(normal.calls.length,2);assert.equal(normal.calls[0].url,target);
+    assert.deepEqual(Object.fromEntries(new URLSearchParams(normal.calls[1].body)),{source,target});
+    assert.equal(Object.keys(JSON.parse(await fs.readFile(state,'utf8'))).length,1);
+  } finally {await fs.rm(dir,{recursive:true,force:true});}
+});
