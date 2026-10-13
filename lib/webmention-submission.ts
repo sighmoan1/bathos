@@ -12,7 +12,7 @@ function publicUrl(value: string): URL {
   if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.hash || url.port) {
     throw new Error("Use a public HTTP or HTTPS URL without credentials, a port or a fragment.")
   }
-  const host = url.hostname.toLowerCase()
+  const host = url.hostname.toLowerCase().replace(/\.$/, "")
   if (!host.includes(".") || host.endsWith(".local") || host.endsWith(".localhost") || host.endsWith(".internal") || host === "localhost" || host.includes(":") || /^\d+\.\d+\.\d+\.\d+$/.test(host)) {
     throw new Error("Use a publicly accessible website URL.")
   }

@@ -13,9 +13,10 @@ test('receiver is disabled unless an explicitly configured same-origin path is s
 });
 test('accepts published public source and canonical Bathos article only',()=>{
  assert.equal(validateWebmentionSubmission(' https://example.org/reply/ ','https://bathos.org/posts/Article/').target,'https://bathos.org/posts/Article/');
- for(const source of ['file:///secret','javascript:alert(1)','http://localhost/reply','https://127.0.0.1/reply','https://[::1]/reply','https://service.internal/reply','https://u:p@example.org/reply','https://example.org:8080/reply','https://example.org/reply#fragment']) assert.throws(()=>validateWebmentionSubmission(source,'https://bathos.org/posts/Article/'),source);
+ for(const source of ['file:///secret','javascript:alert(1)','http://localhost/reply','https://localhost./reply','https://foo.localhost./reply','https://service.local./reply','https://service.internal./reply','https://127.0.0.1/reply','https://[::1]/reply','https://service.internal/reply','https://u:p@example.org/reply','https://example.org:8080/reply','https://example.org/reply#fragment']) assert.throws(()=>validateWebmentionSubmission(source,'https://bathos.org/posts/Article/'),source);
  for(const target of ['https://bathos.org/','https://bathos.org/posts/Article','https://evil.example/posts/Article/','https://bathos.org/posts/Article/?x=1','http://bathos.org/posts/Article/','https://bathos.org/posts/a/b/']) assert.throws(()=>validateWebmentionSubmission('https://example.org/reply/',target),target);
  assert.throws(()=>validateWebmentionSubmission('https://bathos.org/posts/Article/','https://bathos.org/posts/Article/'));
+ assert.equal(validateWebmentionSubmission('https://example.org./reply/','https://bathos.org/posts/Article/').source,'https://example.org./reply/');
 });
 test('messages distinguish receipt, unavailable receiver and rejection',()=>{
  assert.match(webmentionResponseMessage(202),/Received for verification/);
