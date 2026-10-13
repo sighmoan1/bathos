@@ -112,3 +112,13 @@ test('failed oldest source rotates attempts without renewing its verification le
  await worker.scheduled({scheduledTime:Date.now(),cron:'* * * * *'});assert.ok((await app.db.prepare('SELECT verified_at FROM mentions WHERE source=?').bind('https://reply.site/reply2').first()).verified_at>old);
  assert.equal((await app.db.prepare('SELECT verified_at FROM mentions WHERE source=?').bind(source).first()).verified_at,old);
 });
+
+test('moderator pagination exposes older pending records and rejects invalid offsets',async(t)=>{
+ const app=await setup();t.after(()=>app.mf.dispose());
+ await app.db.exec("WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i+1 FROM n WHERE i<101) INSERT INTO mentions(source,target,state,fingerprint,verified_at,updated_at) SELECT 'https://moderation.site/'||printf('%03d',i),'https://bathos.org/posts/gassing/','pending','f',0,0 FROM n");
+ const page=async offset=>app.send('/api/webmention/admin'+(offset===undefined?'':`?offset=${offset}`),{headers:{authorization:`Bearer ${token}`}});
+ const first=await page();assert.equal(first.status,200);const firstData=await first.json();assert.equal(firstData.mentions.length,100);assert.equal(firstData.nextOffset,100);assert.equal(firstData.mentions[0].source,'https://moderation.site/001');
+ const second=await page('100');assert.equal(second.status,200);const secondData=await second.json();assert.equal(secondData.mentions.length,1);assert.equal(secondData.mentions[0].source,'https://moderation.site/101');assert.equal(secondData.mentions[0].state,'pending');assert.equal(secondData.mentions[0].fingerprint,'f');assert.equal(secondData.nextOffset,null);
+ for(const offset of ['-1','1000','1.5','1e2','00','abc','','1&offset=2'])assert.equal((await page(offset)).status,400,offset);
+ assert.equal((await page('999')).status,200);assert.equal((await app.send('/api/webmention/admin?offset=100')).status,401);
+});

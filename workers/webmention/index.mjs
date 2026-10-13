@@ -61,8 +61,11 @@ async function receive(request,env,now) {
 async function admin(request,url,env,now) {
   if (!await authenticated(request,env.MODERATOR_TOKEN)) throw new HttpError(401,'Unauthorized');
   if (request.method==='GET' && url.pathname==='/api/webmention/admin') {
-    const rows=await env.DB.prepare('SELECT source,target,state,name,author,published,fingerprint,verified_at,updated_at FROM mentions ORDER BY updated_at DESC LIMIT 100').all();
-    return {status:200,data:{mentions:rows.results}};
+    const rawOffset=url.searchParams.get('offset') ?? '0';
+    if(url.searchParams.getAll('offset').length>1 || !/^(?:0|[1-9]\d{0,2})$/.test(rawOffset)) throw new HttpError(400,'Offset must be an integer from 0 to 999');
+    const offset=Number(rawOffset);
+    const rows=await env.DB.prepare('SELECT source,target,state,name,author,published,fingerprint,verified_at,updated_at FROM mentions ORDER BY updated_at DESC,source,target LIMIT 100 OFFSET ?').bind(offset).all();
+    return {status:200,data:{mentions:rows.results,offset,nextOffset:rows.results.length===100 && offset+100<=999 ? offset+100 : null}};
   }
   if (request.method!=='POST' || url.pathname!=='/api/webmention/admin') throw new HttpError(405,'Method not allowed');
   let body; try { body=JSON.parse(await boundedText(request,8192)); } catch(error) { if (error instanceof HttpError) throw error; throw new HttpError(400,'Invalid JSON'); }
