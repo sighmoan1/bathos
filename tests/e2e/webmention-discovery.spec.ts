@@ -8,6 +8,10 @@ test(`exported ${view} article guides humans and agents to reply without JavaScr
   const slug = fs.readdirSync('content').find(name => name.endsWith('.md'))!.slice(0, -3)
   const path = `/posts/${encodeURIComponent(slug)}/`
   await page.goto(`/${view}/${encodeURIComponent(slug)}/`)
+  if (view === 'posts') {
+    await page.getByRole('link', { name: 'Read this article without JavaScript', exact: true }).click()
+    await expect(page).toHaveURL(new RegExp(`/read/${encodeURIComponent(slug)}/$`))
+  }
   await expect(page.locator('article h1')).toBeVisible()
   const guidance = page.getByRole('complementary', { name: 'Reply from your own website' })
   await guidance.scrollIntoViewIfNeeded()
