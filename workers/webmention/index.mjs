@@ -116,8 +116,10 @@ export default {
     if (env.ENABLED!=='true' || !env.DB) return;
     const now=Math.floor(Date.now()/1000);
     await env.DB.prepare('DELETE FROM limits WHERE expires < ?').bind(now).run();
-    const rows=await env.DB.prepare("SELECT source,target,fingerprint FROM mentions WHERE state='approved' ORDER BY verified_at LIMIT 1").all();
+    const rows=await env.DB.prepare("SELECT source,target,fingerprint FROM mentions WHERE state='approved' ORDER BY last_checked_at LIMIT 1").all();
     for (const row of rows.results) {
+      // Rotate attempts even after network failures; never renew a failed proof lease.
+      await env.DB.prepare('UPDATE mentions SET last_checked_at=? WHERE source=? AND target=?').bind(now,row.source,row.target).run();
       try {
         const proof=await verify(row.source,row.target,env);
         if (!proof) await retract(env.DB,row.source,row.target);
