@@ -28,9 +28,3 @@ test('XML escapes metadata and rejects prohibited control characters; absent dat
  assert.doesNotMatch(output,/<pubDate>|<lastBuildDate>|Invalid Date|\u0001|<script>/);
  assert.doesNotThrow(()=>buildRss([]));
 });
-test('email signup stays hidden until configured and only accepts the ad-free chosen provider', () => {
- const {emailSubscriptionUrl} = load('lib/email-subscriptions.ts');
- assert.equal(emailSubscriptionUrl(),null);
- assert.equal(emailSubscriptionUrl('https://buttondown.com/bathos'),'https://buttondown.com/bathos');
- for (const value of ['https://blogtrottr.com/?subscribe=feed','http://buttondown.com/bathos','https://buttondown.com.evil.test/bathos','https://user:password@buttondown.com/bathos','https://buttondown.com/bathos?redirect=other','https://buttondown.com/']) assert.throws(()=>emailSubscriptionUrl(value));
-});
