@@ -8,6 +8,10 @@ publishing Worker's tests, the static build, desktop/Android browser tests and
 mobile manager checks. Browser tests use local servers and mocked publishing
 APIs; CI never publishes posts or deploys to Cloudflare.
 
+The receiving Webmention Worker's lockfile is also installed when its package
+exists, so its tests can join the release command without adding CI write
+permissions or deployment credentials.
+
 ## Security policy
 
 - Workflow permissions are `contents: read`; all other token permissions are

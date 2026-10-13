@@ -38,6 +38,11 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Install locked publishing Worker dependencies
         run: npm ci --prefix workers/admin-oauth
+      - name: Install locked Webmention Worker dependencies when present
+        run: |
+          if [ -f workers/webmention/package-lock.json ]; then
+            npm ci --prefix workers/webmention
+          fi
       - name: Install Chromium and its system dependencies
         run: pnpm exec playwright install --with-deps chromium
       - name: Check TypeScript
