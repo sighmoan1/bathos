@@ -1,0 +1,13 @@
+# Webmention security boundaries
+
+Outbound delivery uses a live published Bathos source as the authority to send. Local metadata selects targets but cannot authorize a request without a real backlink. Standards-based parsing ignores comments, script text and inert template contents. Discovery preserves the W3C precedence and endpoint query string.
+
+The Node sender validates every DNS address and pins a checked address into the request socket while preserving Host/TLS identity. It rejects private/reserved destinations, credentials, unsupported schemes and ports, HTTPS downgrades, oversized responses and excess redirects. It forwards no user cookies, authorization headers or arbitrary inbound headers. Delivery state is local operator data; ambiguous network results require operator inspection before resending.
+
+The receiver uses native Cloudflare HTMLRewriter and persistent D1 state. It stores verified backlinks pending moderator approval, re-verifies at approval, returns changed content to pending and retracts missing backlinks. Public reads expose approved records within their verification lease only. Titles/authors are bounded plain text. Browser display independently validates fields and renders text without HTML or remote images.
+
+Receiver DNS preflight is defense in depth; it cannot pin an address into Workers fetch. Production relies on Cloudflare's documented public egress boundary plus explicit `global_fetch_strictly_public`, standard ports and no private VPC/service/network bindings. The flag also ensures same-zone fetches use the public front door rather than bypassing the zone's security settings. Do not deploy this module in a runtime with unrestricted private egress. References: [Workers security model](https://developers.cloudflare.com/workers/reference/security-model/) and [strictly public fetch compatibility flag](https://developers.cloudflare.com/workers/configuration/compatibility-flags/#global-fetch-strictly-public).
+
+The Worker guide records input/DNS/body deadlines, redirect limits, atomic per-client/host/global quotas, bounded records, authenticated moderation and scheduled verification. These safeguards are prerequisites for enabling the receiver; a merged disabled configuration is not evidence of production readiness. Tests use real local Cloudflare runtime parsing/storage, with mocked external network traffic. Security tests never notify third-party articles.
+
+Release evidence belongs on the issue-linked PRs. #41 remains open until receiver deployment configuration and controlled production receive/moderate/read/retract checks are verified. No test or hosting check may be bypassed to activate receiving.

@@ -8,6 +8,7 @@ import { useReaderDialog } from "@/lib/use-reader-dialog"
 
 import { postPath } from "@/lib/post-links"
 import { ReplyContext } from "./reply-context"
+import { WebmentionResponses } from "./webmention-responses"
 
 import { ShareButton } from "./share-button"
 
@@ -109,6 +110,7 @@ export function ArticleReader({ article, onClose, onSave, onDismiss, onTagClick,
         <div className="e-content article-prose">
           <ReactMarkdown>{article.content}</ReactMarkdown>
         </div>
+        <WebmentionResponses target={`https://bathos.org${postPath(article.slug)}`} />
       </article>
     </motion.div>
   )
