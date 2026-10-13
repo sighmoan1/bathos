@@ -453,6 +453,7 @@ export function SwipeFeed({ initialArticles, allTags, initialReadingArticle }: S
         {readingArticle && (
           <ArticleReader
             article={readingArticle}
+            animateEntry={isLoaded || !initialReadingArticle}
             onClose={handleReaderClose}
             onSave={handleReaderSave}
             onDismiss={handleReaderDismiss}
