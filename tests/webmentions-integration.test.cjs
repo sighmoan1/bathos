@@ -104,14 +104,32 @@ test('real rendered reply → sender → Worker/D1 → reviewed approval → cha
 });
 test('cross-layer parser/abuse boundaries reject fake backlinks and invalid source URLs',async t=>{
   const app=await fixture(t);const {sendWebmention}=await import('../scripts/send-webmentions.mjs');
-  app.remote.body=`<!-- <a href="${target}"> --><script>const fake='<a href="${target}">';</script><template><a href="${target}"></a></template>`;
-  await assert.rejects(sendWebmention({source,target,transport:app.transport}),/does not link/);
-  const received=await app.request('/api/webmention',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({source,target}).toString()});
-  assert.equal(received.status,200);assert.deepEqual(await app.publicResponses(),{responses:[]});
-  assert.equal((await app.db.prepare('SELECT COUNT(*) n FROM mentions').first()).n,0);
+  for(const html of [
+    `<!-- <a href="${target}"> -->`,
+    `<script>const fake='<a href="${target}">';</script>`,
+    `<template><a href="${target}"></a></template>`,
+    `<textarea><a href="${target}">raw text</a></textarea>`,
+    `<div data-note="&quot;><a href='${target}'>fake</a>">Encoded attribute delimiter</div>`,
+  ]) {
+    app.remote.body=html;
+    await assert.rejects(sendWebmention({source,target,transport:app.transport}),/does not link/);
+    const received=await app.request('/api/webmention',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({source,target}).toString()});
+    assert.equal(received.status,200);assert.deepEqual(await app.publicResponses(),{responses:[]});
+    assert.equal((await app.db.prepare('SELECT COUNT(*) n FROM mentions').first()).n,0);
+  }
   for(const unsafe of ['http://127.0.0.1/','https://user:secret@bathos.org/posts/x/','javascript:alert(1)']){
     await assert.rejects(sendWebmention({source:unsafe,target,transport:app.transport}));
     const response=await app.request('/api/webmention',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({source:unsafe,target}).toString()});assert.equal(response.status,400);
   }
   assert.equal((await app.request('/api/webmention/admin')).status,401);
+});
+
+test('approval rechecks removed backlink and retracts pending record immediately',async t=>{
+  const app=await fixture(t);const {sendWebmention}=await import('../scripts/send-webmentions.mjs');
+  await sendWebmention({source,target,transport:app.transport});
+  const reviewed=await app.reviewed();assert.equal(reviewed.state,'pending');
+  app.remote.body='<title>Withdrawn before approval</title><p>No backlink remains.</p>';
+  const approval=await app.approve(reviewed.fingerprint);assert.equal(approval.status,422);
+  assert.deepEqual(await app.publicResponses(),{responses:[]});
+  assert.equal((await app.db.prepare('SELECT COUNT(*) n FROM mentions').first()).n,0);
 });
