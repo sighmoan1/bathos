@@ -63,7 +63,10 @@ export async function sendWebmention({ source, target, transport = createTranspo
   if (live.status !== 200 || live.url !== source || !/^text\/html(?:;|$)/i.test(live.headers['content-type'] || '')) {
     throw new Error('Source is unpublished, redirected, or not HTML');
   }
-  if (!links(live.body, source).some(link => link.url === target)) throw new Error('Live source does not link to target');
+  // Fragment links mention the same document; query/path remain part of its identity.
+  if (!links(live.body, source).some(link => {
+    try { return publicURL(link.url).href === target; } catch { return false; }
+  })) throw new Error('Live source does not link to target');
   const destination = await transport(target);
   if (destination.status < 200 || destination.status >= 300) throw new Error(`Target discovery HTTP ${destination.status}`);
   const endpoint = discoverEndpoint(destination);
