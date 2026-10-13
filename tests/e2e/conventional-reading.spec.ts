@@ -33,6 +33,9 @@ for (const javaScriptEnabled of [false, true]) {
         const normalizedHTML = await page.evaluate((html) => {
           const template = document.createElement('template')
           template.innerHTML = html
+          // React 19 emits image preloads beside static markup; Next hoists them
+          // into the document head. Compare the complete article body itself.
+          template.content.querySelectorAll('link[rel="preload"][as="image"]').forEach(link => link.remove())
           return template.innerHTML
         }, expectedHTML)
         expect(await page.locator('.article-prose').innerHTML()).toBe(normalizedHTML)
