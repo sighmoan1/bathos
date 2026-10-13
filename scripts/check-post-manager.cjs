@@ -84,7 +84,7 @@ async function main() {
   const origin = `http://127.0.0.1:${server.address().port}`;
   const browser = await chromium.launch();
   try {
-    for (const width of [375, 390]) await mobileFlow(browser, origin, width);
+    for (const width of [320, 375, 390]) await mobileFlow(browser, origin, width);
     await offlineShell(browser, origin);
   } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }
 }
@@ -96,6 +96,7 @@ async function mobileFlow(browser, origin, width) {
   page.on('dialog', dialog => dialog.dismiss());
   let authenticated = false, nextFailure = 0;
   const posts = new Map([
+    ['Gassing', { slug: 'Gassing', title: 'Gassing', description: 'Original uppercase filename', date: '2026-10-12', tags: [], body: 'Gassing body', sha: 'gassing-sha' }],
     ['first-post', { slug: 'first-post', title: 'First post', description: 'Keep this one', date: '2026-10-12', tags: ['test'], body: 'First body', sha: 'first-sha' }],
     ['second-post', { slug: 'second-post', title: 'Second post', description: 'Another post', date: '2026-10-11', tags: [], body: 'Second body', sha: 'second-sha' }],
   ]);
@@ -107,7 +108,7 @@ async function mobileFlow(browser, origin, width) {
     if (url.pathname === '/api/session') return json({ authenticated, ...(authenticated ? { user: { login: 'phone-writer' } } : {}) });
     if (url.pathname === '/api/logout') { authenticated = false; return json({ ok: true }); }
     if (url.pathname.startsWith('/api/deployment/')) { deployments.push(url.pathname); return json({ state: 'success' }); }
-    if (method === 'GET' && url.pathname === '/api/posts') return json({ posts: [...posts.values()] });
+    if (method === 'GET' && url.pathname === '/api/posts') return json({ posts: [...posts.values()], warnings: [{slug: 'broken-post', message: 'Invalid front matter; edit this post in GitHub.'}] });
     const slug = decodeURIComponent(url.pathname.split('/')[3] || '');
     if (method === 'GET') return json(posts.get(slug) || { error: 'Not found' }, posts.has(slug) ? 200 : 404);
     const body = request.postDataJSON();
@@ -132,6 +133,16 @@ async function mobileFlow(browser, origin, width) {
   authenticated = true;
   await page.getByRole('button', { name: 'Check sign-in again' }).click();
   await page.getByRole('heading', { name: 'First post', exact: true }).waitFor();
+  await page.getByRole('link', {name:'broken-post.md'}).waitFor();
+  await page.getByRole('searchbox', {name:'Search posts'}).fill('gassing');
+  await page.getByRole('heading', {name:'Gassing',exact:true}).click();
+  await page.getByLabel('Your writing').fill('Gassing edited from a phone');
+  await page.getByRole('button', {name:'Save to site',exact:true}).click();
+  await until(() => writes.length === 1, 'uppercase filename could not save');
+  assert.equal(writes[0].slug, 'Gassing');
+  writes.length = 0;
+  await page.getByRole('button', {name:'All posts',exact:true}).click();
+  await page.getByRole('searchbox', {name:'Search posts'}).fill('');
   if (process.env.QA_SCREENSHOTS) { fs.mkdirSync(process.env.QA_SCREENSHOTS, { recursive: true }); await page.screenshot({ path: path.join(process.env.QA_SCREENSHOTS, `manager-list-${width}.png`), fullPage: true }); }
   await page.getByRole('button', { name: 'New post', exact: true }).click();
   await page.getByRole('button', { name: 'Save to site', exact: true }).click();
@@ -158,6 +169,9 @@ async function mobileFlow(browser, origin, width) {
   if (process.env.QA_SCREENSHOTS) await page.screenshot({ path: path.join(process.env.QA_SCREENSHOTS, `manager-preview-${width}.png`), fullPage: true });
   await page.getByRole('button', { name: 'Write', exact: true }).click();
   await page.setViewportSize({ width, height: 375 });
+  await page.getByLabel('Your writing').focus();
+  const saveBounds = await page.getByRole('button', {name:'Save to site',exact:true}).boundingBox();
+  assert.ok(saveBounds.y >= 0 && saveBounds.y + saveBounds.height <= 375, 'Save stays above keyboard-sized viewport');
   await noOverflow(page, width);
   await page.getByRole('button', { name: 'Save to site', exact: true }).click();
   await page.getByText('Published. Your changes are live on Bathos.', { exact: true }).waitFor();

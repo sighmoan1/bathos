@@ -107,3 +107,34 @@ test('foreign origins/configurations and upstream failures do not expose tokens 
  }
  const response=await handleRequest(await req('/api/posts/test-post'),env,async()=>Response.json({message:'private-token'},{status:401}));assert.equal(response.status,401);assert.match(response.headers.get('set-cookie'),/Max-Age=0/);
 });
+
+test('all real repository posts are editable with their original case-sensitive filenames', async () => {
+ const { readdir, readFile } = await import('node:fs/promises');
+ const files = (await readdir(new URL('../../content/', import.meta.url))).filter(name => name.endsWith('.md'));
+ const contents = new Map(await Promise.all(files.map(async name => [name, await readFile(new URL(`../../content/${name}`, import.meta.url), 'utf8')])));
+ const upstream = async url => {
+  if (url.endsWith('/contents/content?ref=main')) return Response.json(files.map(name => ({type:'file', name})));
+  const name = decodeURIComponent(new URL(url).pathname.split('/').pop());
+  assert.ok(contents.has(name), `original filename ${name} must be preserved`);
+  const content = contents.get(name);
+  return Response.json({type:'file',encoding:'base64',size:Buffer.byteLength(content),sha,content:Buffer.from(content).toString('base64')});
+ };
+ const list = await handleRequest(await req('/api/posts'),env,upstream);
+ const data = await list.json();
+ assert.equal(data.posts.length,files.length);
+ assert.equal(data.warnings,undefined);
+ const gassing = await handleRequest(await req('/api/posts/Gassing'),env,upstream);
+ assert.equal(gassing.status,200);
+ const value = await gassing.json();
+ assert.equal(value.slug,'Gassing');
+ let writes = 0;
+ for (const method of ['PUT','DELETE']) {
+  const response = await handleRequest(await req('/api/posts/Gassing',method,method === 'PUT' ? value : {sha}),env,async(url,options) => {
+   writes++; assert.equal(url,'https://api.github.com/repos/sighmoan1/bathos/contents/content/Gassing.md');
+   assert.equal(JSON.parse(options.body).sha,sha);
+   return Response.json({content:{sha},commit:{sha:commit}});
+  });
+  assert.equal(response.status,200);
+ }
+ assert.equal(writes,2);
+});

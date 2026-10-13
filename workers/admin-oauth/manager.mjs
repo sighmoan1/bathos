@@ -32,9 +32,11 @@ async function session(request, env) {
 class Failure extends Error { constructor(status, code, message) { super(message); this.status = status; this.code = code; } }
 const fail = (status, code, message) => { throw new Failure(status, code, message); };
 const validSlug = slug => typeof slug === 'string' && slug.length <= 100 && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug);
+// Existing public URLs are case-sensitive. New filenames still use lowercase.
+const validExistingSlug = slug => typeof slug === 'string' && slug.length <= 100 && /^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$/.test(slug);
 const validSha = sha => typeof sha === 'string' && /^[a-f0-9]{40}$/.test(sha);
 function fields(data, slug) {
-  if (!data || typeof data !== 'object' || Array.isArray(data) || !validSlug(slug)) fail(400, 'invalid_post', 'Use a filename containing lowercase letters, numbers and hyphens.');
+  if (!data || typeof data !== 'object' || Array.isArray(data) || !validExistingSlug(slug)) fail(400, 'invalid_post', 'Use a filename containing lowercase letters, numbers and hyphens.');
   if (Object.keys(data).some(k => !['slug','title','description','date','tags','body','sha'].includes(k)) || (data.slug !== undefined && data.slug !== slug)) fail(400, 'invalid_post', 'Unexpected post fields.');
   if (typeof data.title !== 'string' || !data.title.trim() || data.title.length > 300 || typeof data.description !== 'string' || !data.description.trim() || data.description.length > 2000 || typeof data.body !== 'string' || !data.body.trim() || encoder.encode(data.body).length > 100000 || typeof data.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(data.date) || !Number.isFinite(Date.parse(`${data.date}T00:00:00Z`)) || new Date(`${data.date}T00:00:00Z`).toISOString().slice(0, 10) !== data.date || !Array.isArray(data.tags) || data.tags.length > 30 || data.tags.some(t => typeof t !== 'string' || !t.trim() || t.length > 100)) fail(400, 'invalid_post', 'Provide a title, description, valid date, tags and Markdown body.');
   return { slug, title: data.title, description: data.description, date: data.date, tags: data.tags, body: data.body };
@@ -106,7 +108,7 @@ export async function manageRequest(request, env, upstream) {
       for (let offset = 0; offset < files.length; offset += 4) {
         await Promise.all(files.slice(offset, offset + 4).map(async file => {
           const slug = file.name.slice(0, -3);
-          if (!validSlug(slug)) { warnings.push({ slug, message: 'This filename cannot be edited.' }); return; }
+          if (!validExistingSlug(slug)) { warnings.push({ slug, message: 'This filename cannot be edited.' }); return; }
           try { const { body, ...post } = await readPost(slug); posts.push(post); } catch (error) { if (error.status !== 422) throw error; warnings.push({ slug, message: 'Invalid front matter; edit this post in GitHub.' }); }
         }));
       }
@@ -117,13 +119,13 @@ export async function manageRequest(request, env, upstream) {
     if (deployment && request.method === 'GET') return json(deploymentState(deployment[1], (await github(`/commits/${deployment[1]}/check-runs?per_page=100`)).check_runs || []));
     const match = url.pathname.match(/^\/api\/posts\/([^/]+)$/);
     const slug = match?.[1];
-    if (match && !validSlug(slug)) fail(400, 'invalid_slug', 'Invalid post filename.');
+    if (match && !validExistingSlug(slug)) fail(400, 'invalid_slug', 'Invalid post filename.');
     if (match && request.method === 'GET') return json(await readPost(slug));
     if ((url.pathname === '/api/posts' && request.method === 'POST') || (match && ['PUT','DELETE'].includes(request.method))) {
       const data = await requestBody(request);
       if (request.method !== 'POST' && (!data || !validSha(data.sha))) fail(400, 'missing_sha', 'Reload the post before updating or deleting it.');
       const target = request.method === 'POST' ? data?.slug : slug;
-      if (!validSlug(target)) fail(400, 'invalid_slug', 'Use lowercase letters, numbers and hyphens for the filename.');
+      if (!(request.method === 'POST' ? validSlug(target) : validExistingSlug(target))) fail(400, 'invalid_slug', 'Use lowercase letters, numbers and hyphens for the filename.');
       if (request.method === 'DELETE') {
         if (Object.keys(data).some(k => k !== 'sha')) fail(400, 'invalid_post', 'Unexpected deletion fields.');
         const result = await github(`/contents/content/${target}.md`, 'DELETE', { message: `Delete post: ${target}`, sha: data.sha, branch: 'main' });
