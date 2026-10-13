@@ -24,7 +24,7 @@ export function WebmentionResponses({ target, enabled = process.env.NEXT_PUBLIC_
             const { value, done } = await reader.read()
             if (done) break
             size += value.byteLength
-            if (size > 65536) throw new Error("Response list too large")
+            if (size > 1024 * 1024) throw new Error("Response list too large")
             chunks.push(value)
           }
         } finally { await reader.cancel() }
