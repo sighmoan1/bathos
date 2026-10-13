@@ -122,3 +122,61 @@
 @media (max-width: 600px) { .reader-title { font-size: clamp(1.6rem, 7vw, 2.5rem); } .reader-description { font-size: var(--bathos-text-body); } }
 @media (max-height: 500px) { .reader-deck { padding-block: 8px; } .reader-card-content { padding: 14px 20px; } .reader-title { font-size: 1.5rem; } .reader-description { font-size: 0.875rem; } .reader-card-actions { max-width: var(--bathos-reading-width); width: 100%; margin-top: 4px; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
+
+/* Phone browsers can request a ~980px desktop viewport. Scale rem-based UI
+   back to device size in that mode, without disabling browser zoom. */
+html.reader-phone { font-size: calc(16px * var(--reader-phone-scale, 1)); }
+.reader-header-tools > button { min-width: 2.75rem; min-height: 2.75rem; }
+@media (hover: none), (pointer: coarse) { .reader-key-hint { display: none; } }
+@media (max-width: 600px) {
+  .reader-card-content { justify-content: flex-start; padding: 1.5rem; gap: .25rem; }
+  .reader-title { font-size: 2rem; line-height: 1.12; margin-top: .75rem; }
+  .reader-description { font-size: 1.0625rem; line-height: 1.6; -webkit-line-clamp: 5; }
+  .reader-card-actions { margin-top: auto; padding-top: 1.5rem; }
+  .reader-card-content > div:first-child button { min-height: 2.75rem; padding: .375rem .75rem; font-size: .8125rem; }
+}
+.reader-phone .reader-header-row { flex-wrap: wrap; gap: .5rem; }
+.reader-phone .reader-header-row h1 { font-size: 1.25rem; }
+.reader-phone .reader-header-tools { margin-left: auto; }
+.reader-phone .reader-deck { padding: .75rem; }
+.reader-phone .reader-card-content { justify-content: flex-start; padding: 1.5rem; gap: .25rem; }
+.reader-phone .reader-title { font-size: 2rem; line-height: 1.12; margin-top: .75rem; }
+.reader-phone .reader-description { font-size: 1.0625rem; line-height: 1.6; -webkit-line-clamp: 5; }
+.reader-phone .reader-card-actions { margin-top: auto; padding-top: 1.5rem; }
+.reader-phone .reader-card-content > div:first-child button { min-height: 2.75rem; padding: .375rem .75rem; font-size: .8125rem; }
+.reader-phone .reader-key-hint { display: none; }
+.reader-phone .reader-controls button { min-height: 2.75rem; font-size: .8125rem; }
+.reader-phone .reader-controls button > div { width: 2.5rem; height: 2.5rem; }
+.reader-phone .reader-controls svg { width: 1.25rem; height: 1.25rem; }
+.reader-phone .reader-card-surface { border-radius: var(--radius); }
+@media (max-height: 500px) {
+  .reader-card-content { padding: .75rem 1rem; gap: 0; }
+  .reader-title { font-size: 1.5rem; margin-top: 0; }
+  .reader-description { font-size: .875rem; -webkit-line-clamp: 2; }
+  .reader-card-actions { padding-top: .25rem; }
+}
+
+.reader-phone .reader-tag-filter button { min-height: 2.75rem; font-size: .8125rem; }
+.reader-phone .reader-card-actions button { min-height: 3rem; font-size: 1rem; }
+.reader-phone .reader-card-actions svg { width: 1.25rem; height: 1.25rem; }
+
+.reader-mobile-preview { display: none; }
+.reader-phone .reader-mobile-preview { display: block; margin-top: 1rem; font-size: 1rem; line-height: 1.7; color: var(--foreground); }
+.reader-phone .reader-mobile-preview p { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 7; overflow: hidden; }
+.reader-phone .reader-card-actions { margin-top: 1rem; }
+.reader-phone .reader-card-actions > button:first-child, .reader-phone .reader-card-actions > button:last-child { display: none; }
+@media (max-width: 600px) {
+  .reader-mobile-preview { display: block; margin-top: 1rem; font-size: 1rem; line-height: 1.7; }
+  .reader-mobile-preview p { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 7; overflow: hidden; }
+  .reader-card-actions { margin-top: 1rem; }
+}
+@media (max-height: 700px) { .reader-phone .reader-mobile-preview p { -webkit-line-clamp: 3; } }
+@media (max-height: 500px) { .reader-mobile-preview, .reader-phone .reader-mobile-preview { display: none; } .reader-phone .reader-card-actions { padding-top: .25rem; margin-top: .25rem; } }
+
+@media (max-height: 500px) {
+  .reader-phone .reader-card-content { padding: .75rem 1rem; gap: 0; }
+  .reader-phone .reader-card-tags { display: none; }
+  .reader-phone .reader-title { font-size: 1.25rem; margin-top: 0; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+  .reader-phone .reader-description { font-size: .875rem; -webkit-line-clamp: 1; }
+  .reader-phone .reader-card-actions button { min-height: 2.75rem; padding-block: .5rem; }
+}

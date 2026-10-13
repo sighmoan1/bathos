@@ -39,6 +39,8 @@ export const ArticleCard = forwardRef<HTMLDivElement, ArticleCardProps>(function
   },
   ref,
 ) {
+  const preview = article.content.trim().split(/\n\s*\n/).find(paragraph => !paragraph.startsWith("#") && !paragraph.startsWith("```"))
+
   const x = useMotionValue(0)
   const y = useMotionValue(0)
 
@@ -184,7 +186,7 @@ export const ArticleCard = forwardRef<HTMLDivElement, ArticleCardProps>(function
         <div className="reader-card-content flex flex-col p-5 short:p-3.5">
           {/* Tags */}
           {article.tags && article.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mb-3 short:mb-2">
+            <div className="reader-card-tags flex flex-wrap gap-1.5 mb-3 short:mb-2">
               {article.tags.slice(0, 3).map((tag) => (
                 <button
                   key={tag}
@@ -221,6 +223,8 @@ export const ArticleCard = forwardRef<HTMLDivElement, ArticleCardProps>(function
               })}
             </p>
           )}
+
+          {preview && <div className="reader-mobile-preview"><p>{preview.replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/[*_`]/g, "")}</p></div>}
 
           {/* Actions. The bin and bookmark buttons are the click-driven
               equivalent of swiping the card left and right. */}

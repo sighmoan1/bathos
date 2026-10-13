@@ -17,6 +17,7 @@ import { ArticleCard } from "./article-card"
 import { ArticleReader } from "./article-reader"
 import { ArticleListPanel } from "./article-list-panel"
 import { TagFilter } from "./tag-filter"
+import { useMobileLayout } from "@/lib/use-mobile-layout"
 import { ReaderPwa } from "./reader-pwa"
 import { useFeedKeyboard, useFeedWheel } from "@/lib/use-feed-controls"
 
@@ -30,6 +31,7 @@ const SAVED_KEY = "swipe-reader-saved"
 const TAGS_KEY = "swipe-reader-tags"
 
 export function SwipeFeed({ initialArticles, allTags }: SwipeFeedProps) {
+  useMobileLayout()
   const [dismissed, setDismissed] = useState<string[]>([])
   const [saved, setSaved] = useState<string[]>([])
   const [selectedTags, setSelectedTags] = useState<string[]>([])
@@ -233,9 +235,9 @@ export function SwipeFeed({ initialArticles, allTags }: SwipeFeedProps) {
       {/* Header */}
       <header className="relative z-20 bg-background/80 backdrop-blur-lg border-b border-border pt-[env(safe-area-inset-top)]">
         <div className="w-full px-4 md:px-8 py-3">
-          <div className="flex items-center justify-between">
+          <div className="reader-header-row flex items-center justify-between">
             <h1 className="text-lg font-bold text-foreground">Bathos</h1>
-            <div className="flex items-center gap-1">
+            <div className="reader-header-tools flex items-center gap-1">
               <ReaderPwa />
               {hasArticles && (
                 <span className="text-xs text-muted-foreground mr-1">
@@ -518,7 +520,7 @@ function ControlButton({
       <span className="short:hidden">
         {label}
         {/* Keyboard hints mean nothing on a touch device. */}
-        <span className="opacity-60 hidden sm:inline"> {hint}</span>
+        <span className="reader-key-hint opacity-60 hidden sm:inline"> {hint}</span>
       </span>
     </button>
   )
