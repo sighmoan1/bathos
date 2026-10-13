@@ -30,8 +30,8 @@ function load(file, mocks = {}) {
 function renderedReply(title = 'Integration reply') {
   const { ArticleReader } = load('components/article-reader.tsx',{
     'react-markdown':({children})=>React.createElement('p',null,children),
-    'framer-motion':{motion:{div:({initial,animate,exit,...props})=>React.createElement('div',props)}},
-    '@/lib/use-feed-controls':{useEscapeKey:()=>{}},
+    'framer-motion':{useReducedMotion:()=>false,motion:{div:({initial,animate,exit,...props})=>React.createElement('div',props)}},
+    '@/lib/use-reader-dialog':{useReaderDialog:()=>({ref:null,titleId:'fixture-title',present:true})},
     './share-button':{ShareButton:()=>null},
     './webmention-responses':{WebmentionResponses:()=>null},
   });
