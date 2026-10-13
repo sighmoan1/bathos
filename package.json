@@ -9,7 +9,7 @@
     "start": "next start",
     "test:e2e": "playwright test",
     "verify": "pnpm build && pnpm test:e2e",
-    "verify:release": "node --test tests/*.test.cjs && pnpm --dir workers/admin-oauth test && pnpm verify && node scripts/check-post-manager.cjs",
+    "verify:release": "node --test tests/*.test.cjs workers/subscriptions/*.test.mjs && pnpm --dir workers/admin-oauth test && pnpm verify && node scripts/check-post-manager.cjs",
     "blog:add-image": "node scripts/blog-add-image.mjs"
   },
   "dependencies": {

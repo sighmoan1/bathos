@@ -1,0 +1,53 @@
+{
+  "$schema": "../admin-oauth/node_modules/wrangler/config-schema.json",
+  "name": "bathos-subscriptions",
+  "main": "index.mjs",
+  "compatibility_date": "2026-10-13",
+  "workers_dev": false,
+  "routes": [
+    {
+      "pattern": "bathos.org/api/subscriptions*",
+      "zone_name": "bathos.org"
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "bathos-subscriptions",
+      "database_id": "0688359e-23ee-488e-9f20-723e9c233e11",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": {
+    "DELIVERY_ENABLED": "false",
+    "MAIL_FROM": "Bathos <posts@mail.bathos.org>",
+    "DAILY_LIMIT": "90",
+    "MONTHLY_LIMIT": "2700",
+    "TURNSTILE_SITE_KEY": "0x4AAAAAAFV4gaZc23qSltWu"
+  },
+  "triggers": {
+    "crons": [
+      "*/5 * * * *"
+    ]
+  },
+  "observability": {
+    "enabled": true,
+    "redact_query_string": true,
+    "logs": {
+      "enabled": true,
+      "invocation_logs": false
+    },
+    "traces": {
+      "enabled": true,
+      "head_sampling_rate": 0.1
+    }
+  },
+  "secrets": {
+    "required": [
+      "RESEND_API_KEY",
+      "RESEND_WEBHOOK_SECRET",
+      "TOKEN_SECRET",
+      "TURNSTILE_SECRET"
+    ]
+  }
+}
