@@ -1,5 +1,6 @@
 import {ORIGIN,PREFIX,escapeHtml,verifyToken,verifyChallenge,verifyWebhook,emailAddress,boundedText,ipKey} from './security.mjs';
 import {statement,requestSubscription,stopSubscription} from './store.mjs';
+import {recordEvent} from './events.mjs';
 import {ready,dispatch,scheduled} from './delivery.mjs';
 const headers={'Cache-Control':'no-store','Referrer-Policy':'no-referrer','X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY'};
 const json=(data,status=200)=>Response.json(data,{status,headers});
@@ -74,9 +75,7 @@ export async function handleRequest(request,env,upstream=fetch,clock=Date.now){
    let event;try{event=JSON.parse(body);}catch{return json({error:'Invalid event.'},400);}
    const id=event?.data?.email_id;
    if(typeof id!=='string'||id.length>200)return json({ok:true});
-   const job=await statement(env,'SELECT subscriber_id FROM jobs WHERE message_id=?',id).first();
-   if(job&&['email.bounced','email.complained','email.suppressed'].includes(event.type))await stopSubscription(env,job.subscriber_id,'suppressed',now);
-   if(event.type==='email.delivered')await statement(env,'UPDATE jobs SET delivered_at=COALESCE(delivered_at,?) WHERE message_id=?',now,id).run();
+   await recordEvent(env,event.type,id,now);
    return json({ok:true});
   }
   return json({error:'Not found.'},404);

@@ -144,3 +144,29 @@ test('database failure rolls back cooldown and queue together so an immediate re
  f.DB.batch=batch;
  assert.equal((await signup(f)).status,202);assert.equal(f.sent.length,1);
 });
+test('a bounce arriving before the send response is retained and suppresses the subscriber after reconciliation',async()=>{
+ const f=fixture();await activate(f);
+ const upstream=async(url,options)=>{
+  if(url.includes('siteverify'))return f.upstream(url,options);
+  assert.equal(url,'https://api.resend.com/emails');
+  const response=await f.handle(await webhook(f,'email.bounced','racy-message'));
+  assert.equal(response.status,200);
+  assert.equal(f.DB.sql.prepare('SELECT count(*) n FROM webhook_events').get().n,1);
+  return Response.json({id:'racy-message'});
+ };
+ const response=await f.handle(f.req(PREFIX,{method:'POST',data:{email:'reader@example.test',token:'x'}}),upstream);
+ assert.equal(response.status,503);
+ assert.equal((await statement(f.env,'SELECT status FROM subscribers').first()).status,'suppressed');
+ assert.equal(f.DB.sql.prepare('SELECT count(*) n FROM webhook_events').get().n,0);
+ assert.equal((await statement(f.env,'SELECT state FROM jobs').first()).state,'failed');
+});
+test('paused cron reconciles a receipt left pending after a crash and cancels queued notifications',async()=>{
+ const f=fixture();await activate(f);await signup(f);await confirm(f);
+ f.catalog.articles.push({slug:'future',title:'Future',summary:'Summary',canonicalUrl:ORIGIN+'/posts/future/'});
+ await discover(f.env,f.upstream,NOW+1000);
+ await statement(f.env,"INSERT INTO webhook_events(message_id,type,received_at) VALUES('message-1','email.complained',?)",NOW+1000).run();
+ await scheduled({...f.env,DELIVERY_ENABLED:'false'},f.upstream,{clock:()=>NOW+2000});
+ assert.equal((await statement(f.env,'SELECT status FROM subscribers').first()).status,'suppressed');
+ assert.equal(f.DB.sql.prepare("SELECT count(*) n FROM jobs WHERE kind='post' AND state='cancelled'").get().n,1);
+ assert.equal(f.sent.length,1);
+});

@@ -14,7 +14,7 @@ export async function messageFor(job,subscriber,env) {
   text=`${data.title}\n\n${data.summary}\n\nRead the post: ${data.canonicalUrl}\n\nYou subscribed to new Bathos posts. Unsubscribe: ${unsubscribe}`;
   html=`<h1>${escapeHtml(data.title)}</h1><p>${escapeHtml(data.summary)}</p><p><a href="${escapeHtml(data.canonicalUrl)}">Read the post on Bathos</a></p><p>You subscribed to new Bathos posts.</p>`;
  }
- return {from:env.MAIL_FROM,to:[subscriber.email],subject,text,html:`<!doctype html><html lang="en"><body>${html}<p><a href="${escapeHtml(unsubscribe)}">Unsubscribe</a></p></body></html>`,headers:{'List-Unsubscribe':`<${unsubscribe}>`,'List-Unsubscribe-Post':'List-Unsubscribe=One-Click'}};
+ return {from:env.MAIL_FROM,to:[subscriber.email],subject,text,tags:[{name:'bathos_job',value:job.id}],html:`<!doctype html><html lang="en"><body>${html}<p><a href="${escapeHtml(unsubscribe)}">Unsubscribe</a></p></body></html>`,headers:{'List-Unsubscribe':`<${unsubscribe}>`,'List-Unsubscribe-Post':'List-Unsubscribe=One-Click'}};
 }
 export async function sendMessage(job,subscriber,env,upstream) {
  const message=await messageFor(job,subscriber,env);

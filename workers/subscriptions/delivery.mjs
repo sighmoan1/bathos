@@ -1,5 +1,6 @@
 import {ORIGIN,boundedText} from './security.mjs';
 import {statement,acquireLock,releaseLock,reserveQuota} from './store.mjs';
+import {reconcileEvents,reconcilePending} from './events.mjs';
 import {sendMessage} from './mail.mjs';
 export function configured(env) {
  return env.DELIVERY_ENABLED==='true'&&!!env.DB&&typeof env.RESEND_API_KEY==='string'&&env.RESEND_API_KEY.startsWith('re_')&&typeof env.TOKEN_SECRET==='string'&&/^[A-Za-z0-9_-]{43}$/.test(env.TOKEN_SECRET)&&!!env.TURNSTILE_SECRET&&!!env.TURNSTILE_SITE_KEY&&!!env.RESEND_WEBHOOK_SECRET&&/^Bathos <[a-z0-9.-]+@mail\.bathos\.org>$/.test(env.MAIL_FROM||'');
@@ -39,6 +40,7 @@ export async function dispatch(env,upstream,{clock=Date.now,sleep=ms=>new Promis
  const owner=await acquireLock(env,'dispatch',clock());if(!owner)return {sent:0};
  let sent=0;
  try {
+  await reconcilePending(env);
   await statement(env,"UPDATE jobs SET state='queued' WHERE state='sending' AND lease_until<=?",clock()).run();
   // Provider idempotency expires after 24h. Ambiguous older jobs need human review.
   await statement(env,"UPDATE jobs SET state='uncertain',last_error='idempotency_window_expired' WHERE state='queued' AND first_attempt_at IS NOT NULL AND first_attempt_at<=?",clock()-23*3600000).run();
@@ -57,7 +59,7 @@ export async function dispatch(env,upstream,{clock=Date.now,sleep=ms=>new Promis
    await statement(env,'UPDATE jobs SET first_attempt_at=COALESCE(first_attempt_at,?) WHERE id=?',now,job.id).run();
    const result=await sendMessage(job,subscriber,env,upstream);
    if(result.state==='sent'){
-    await statement(env,"UPDATE jobs SET state=CASE WHEN state='sending' THEN 'sent' ELSE state END,message_id=?,last_error=NULL WHERE id=?",result.id,job.id).run();sent++;
+    await statement(env,"UPDATE jobs SET state=CASE WHEN state='sending' THEN 'sent' ELSE state END,message_id=?,last_error=NULL WHERE id=?",result.id,job.id).run();await reconcileEvents(env,result.id);sent++;
    }else{
     const delay=Math.min(3600000,60000*2**Math.min(job.attempts,6));
     await statement(env,"UPDATE jobs SET state=?,next_attempt_at=?,last_error=? WHERE id=? AND state='sending'",result.state==='retry'?'queued':'failed',now+delay,result.error,job.id).run();
@@ -73,6 +75,7 @@ export async function cleanup(env,now) {
   statement(env,"DELETE FROM subscribers WHERE status='pending' AND requested_at<?",now-7*86400000),
   statement(env,"DELETE FROM subscribers WHERE status IN ('unsubscribed','suppressed') AND unsubscribed_at<?",now-90*86400000),
   statement(env,"DELETE FROM jobs WHERE state IN ('sent','cancelled','failed') AND created_at<?",now-90*86400000),
+  statement(env,'DELETE FROM webhook_events WHERE received_at<?',now-7*86400000),
   statement(env,'DELETE FROM signup_limits WHERE window<?',Math.floor(now/3600000)-24),
   statement(env,'DELETE FROM send_attempts WHERE at<?',now-40*86400000),
  ]);
@@ -80,6 +83,7 @@ export async function cleanup(env,now) {
 export async function scheduled(env,upstream=fetch,options={}) {
  const now=options.clock?.()??Date.now();
  if(!env.DB)return;
+ await reconcilePending(env);
  await cleanup(env,now);
  if(!configured(env))return;
  await discover(env,upstream,now);
