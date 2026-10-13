@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "bathos-webmention",
+  "main": "index.mjs",
+  "compatibility_date": "2026-10-13",
+  "workers_dev": false,
+  "triggers": { "crons": ["* * * * *"] },
+  "compatibility_flags": ["global_fetch_strictly_public"],
+  "vars": { "ENABLED": "false", "SITE_ORIGIN": "https://bathos.org" },
+  "observability": { "enabled": true, "logs": { "enabled": true, "invocation_logs": false }, "traces": { "enabled": true } }
+  // Deliberately no routes or D1 identifiers: bind an existing approved database and
+  // assign bathos.org/api/webmention* only after completing README deployment gates.
+}
