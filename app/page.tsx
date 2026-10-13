@@ -6,5 +6,16 @@ export default function Home() {
   const shuffledArticles = shuffleArray(articles)
   const allTags = getAllTags(articles)
 
-  return <SwipeFeed initialArticles={shuffledArticles} allTags={allTags} />
+  return (
+    <>
+      <noscript>
+        <style>{`[data-swipe-reader] { display: none !important; }`}</style>
+        <main className="mx-auto max-w-3xl p-6">
+          <h1 className="text-3xl font-bold">Bathos</h1>
+          <p className="mt-4"><a className="text-accent underline" href="/articles/">Browse all articles</a> and read them without JavaScript.</p>
+        </main>
+      </noscript>
+      <div data-swipe-reader className="contents"><SwipeFeed initialArticles={shuffledArticles} allTags={allTags} /></div>
+    </>
+  )
 }
