@@ -3,6 +3,7 @@ import { notFound } from "next/navigation"
 import ReactMarkdown from "react-markdown"
 import { getAllArticles } from "@/lib/articles"
 import { postPath } from "@/lib/post-links"
+import { ReplyContext } from "@/components/reply-context"
 import styles from "../../articles/reading.module.css"
 
 export const dynamicParams = false
@@ -39,16 +40,18 @@ export default async function Read({ params }: Props) {
         </nav>
       </header>
       <main id="article" className={styles.main}>
-        <article>
+        <article className="h-entry">
           <header className={styles.header}>
-            <h1>{article.title}</h1>
+            <h1 className="p-name">{article.title}</h1>
+            <a className="u-url" href={`https://bathos.org${postPath(article.slug)}`}>Permalink</a>
+            <ReplyContext inReplyTo={article.inReplyTo} />
             <p>{article.description}</p>
             {article.date && <p className={styles.meta}><time dateTime={article.date}>{article.date}</time></p>}
             {!!article.tags?.length && <ul aria-label="Tags" className={styles.tags}>
               {article.tags.map((tag) => <li key={tag}>{tag}</li>)}
             </ul>}
           </header>
-          <div className={`article-prose ${styles.main}`}><ReactMarkdown>{article.content}</ReactMarkdown></div>
+          <div className={`e-content article-prose ${styles.main}`}><ReactMarkdown>{article.content}</ReactMarkdown></div>
         </article>
         <footer className={styles.footer}><a href="/articles/">Back to all articles</a></footer>
       </main>
