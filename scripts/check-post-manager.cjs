@@ -94,11 +94,13 @@ async function mobileFlow(browser, origin, width) {
   const errors = [], writes = [], deletes = [], deployments = [];
   page.on('pageerror', error => errors.push(error.message));
   page.on('dialog', dialog => dialog.dismiss());
-  let authenticated = false, nextFailure = 0;
+  let authenticated = false, nextFailure = 0, commitSequence = 0, revisionSequence = 0;
+  const nextCommit = () => (++commitSequence).toString(16).padStart(40, '0');
+  const nextRevision = () => (++revisionSequence).toString(16).padStart(40, 'd');
   const posts = new Map([
-    ['Gassing', { slug: 'Gassing', title: 'Gassing', description: 'Original uppercase filename', date: '2026-10-12', tags: [], body: 'Gassing body', sha: 'gassing-sha' }],
-    ['first-post', { slug: 'first-post', title: 'First post', description: 'Keep this one', date: '2026-10-12', tags: ['test'], body: 'First body', sha: 'first-sha' }],
-    ['second-post', { slug: 'second-post', title: 'Second post', description: 'Another post', date: '2026-10-11', tags: [], body: 'Second body', sha: 'second-sha' }],
+    ['Gassing', { slug: 'Gassing', title: 'Gassing', description: 'Original uppercase filename', date: '2026-10-12', tags: [], inReplyTo: ['https://example.com/original?x=1&y=2'], body: 'Gassing body', sha: 'a'.repeat(40) }],
+    ['first-post', { slug: 'first-post', title: 'First post', description: 'Keep this one', date: '2026-10-12', tags: ['test'], body: 'First body', sha: 'b'.repeat(40) }],
+    ['second-post', { slug: 'second-post', title: 'Second post', description: 'Another post', date: '2026-10-11', tags: [], body: 'Second body', sha: 'c'.repeat(40) }],
   ]);
   let cmsRequests = 0;
   await context.route('**://unpkg.com/**', route => { cmsRequests++; return route.abort(); });
@@ -115,13 +117,13 @@ async function mobileFlow(browser, origin, width) {
     if (nextFailure) { const code = nextFailure; nextFailure = 0; if (code === 401) authenticated = false; return json({ error: code === 409 ? 'This post changed. Your draft is safe.' : 'Your session expired. Please sign in again.' }, code); }
     if (method === 'DELETE') {
       assert.equal(body.sha, posts.get(slug).sha, 'delete must use latest saved file SHA');
-      deletes.push(slug); posts.delete(slug); return json({ commitSha: 'delete-commit' });
+      deletes.push(slug); posts.delete(slug); return json({ commitSha: nextCommit() });
     }
     if (method === 'PUT') assert.equal(body.sha, posts.get(slug).sha, 'update must use returned file SHA');
     writes.push({ method, slug, body });
-    const saved = { ...body, sha: `saved-sha-${writes.length}` };
+    const saved = { ...body, sha: nextRevision() };
     posts.set(body.slug, saved);
-    return json({ post: saved, commitSha: `commit-${writes.length}` });
+    return json({ post: saved, commitSha: nextCommit() });
   });
   await page.goto(origin + '/manage/');
   await page.getByRole('link', { name: 'Sign in with GitHub' }).waitFor();
@@ -136,10 +138,12 @@ async function mobileFlow(browser, origin, width) {
   await page.getByRole('link', {name:'broken-post.md'}).waitFor();
   await page.getByRole('searchbox', {name:'Search posts'}).fill('gassing');
   await page.getByRole('heading', {name:'Gassing',exact:true}).click();
+  assert.equal(await page.getByLabel('In reply to', {exact:true}).inputValue(), 'https://example.com/original?x=1&y=2');
   await page.getByLabel('Your writing').fill('Gassing edited from a phone');
   await page.getByRole('button', {name:'Save to site',exact:true}).click();
   await until(() => writes.length === 1, 'uppercase filename could not save');
   assert.equal(writes[0].slug, 'Gassing');
+  assert.deepEqual(writes[0].body.inReplyTo, ['https://example.com/original?x=1&y=2']);
   writes.length = 0;
   await page.getByRole('button', {name:'All posts',exact:true}).click();
   await page.getByRole('searchbox', {name:'Search posts'}).fill('');
@@ -163,6 +167,11 @@ async function mobileFlow(browser, origin, width) {
   await page.getByLabel('Description', { exact: true }).fill('Written on my phone');
   await page.getByLabel(/^Tags/).fill('mobile, test');
   await page.getByLabel('Your writing', { exact: true }).fill('## Phone preview\n\nMy **thought**.');
+  await page.getByLabel('In reply to', {exact:true}).fill('javascript:alert(1)');
+  await page.getByRole('button', { name: 'Save to site', exact: true }).click();
+  await page.getByRole('alert').filter({hasText:'Reply addresses must use HTTP or HTTPS'}).waitFor();
+  assert.equal(writes.length, 0, 'invalid reply address must not reach API');
+  await page.getByLabel('In reply to', {exact:true}).fill('https://EXAMPLE.com/original\nhttp://example.net/reply\nhttps://example.com/original');
   await page.getByRole('button', { name: 'Preview', exact: true }).click();
   await page.getByRole('heading', { name: 'Phone preview' }).waitFor();
   await noOverflow(page, width);
@@ -178,11 +187,14 @@ async function mobileFlow(browser, origin, width) {
   await until(() => writes.length === 1, 'create did not reach API');
   assert.equal(writes[0].method, 'POST');
   assert.equal(writes[0].body.slug, 'phone-thought');
-  assert.ok(deployments.includes('/api/deployment/commit-1'));
+  assert.deepEqual(writes[0].body.inReplyTo, ['https://example.com/original', 'http://example.net/reply']);
+  assert.ok(deployments.includes('/api/deployment/' + '2'.padStart(40, '0')));
   await page.getByLabel('Title', { exact: true }).fill('Updated phone thought');
+  await page.getByLabel('In reply to', {exact:true}).fill('');
   await page.getByRole('button', { name: 'Save to site', exact: true }).click();
   await page.getByText('Published. Your changes are live on Bathos.', { exact: true }).waitFor();
   await until(() => writes.length === 2, 'update did not reach API');
+  assert.deepEqual(writes[1].body.inReplyTo, [], 'empty field explicitly removes reply targets');
   assert.equal(writes[1].method, 'PUT');
   assert.equal(writes[1].body.sha, 'saved-sha-1');
   await page.setViewportSize({ width, height: 812 });
@@ -216,6 +228,7 @@ async function mobileFlow(browser, origin, width) {
   await page.getByRole('link', { name: 'Sign in with GitHub' }).waitFor();
   await page.getByRole('button', { name: 'Write a device draft' }).click();
   await page.getByLabel('Title', { exact: true }).fill('Offline notebook');
+  await page.getByLabel('In reply to', {exact:true}).fill('https://example.org/offline-reply');
   await page.getByLabel('Your writing').fill('Recover this writing after reload');
   await context.setOffline(true);
   await page.getByText(/You’re offline/).waitFor();
@@ -226,6 +239,7 @@ async function mobileFlow(browser, origin, width) {
   await page.getByRole('button', { name: 'Write a device draft' }).click();
   await page.getByRole('button', { name: 'Recover device draft', exact: true }).click();
   assert.equal(await page.getByLabel('Title', { exact: true }).inputValue(), 'Offline notebook');
+  assert.equal(await page.getByLabel('In reply to', {exact:true}).inputValue(), 'https://example.org/offline-reply');
   assert.equal(await page.getByLabel('Your writing').inputValue(), 'Recover this writing after reload');
   await noOverflow(page, width);
   assert.deepEqual(errors, []);
