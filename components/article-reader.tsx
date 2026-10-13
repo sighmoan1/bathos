@@ -6,17 +6,22 @@ import ReactMarkdown from "react-markdown"
 import { motion, useReducedMotion } from "framer-motion"
 import { useReaderDialog } from "@/lib/use-reader-dialog"
 
+import { postPath } from "@/lib/post-links"
+import { ReplyContext } from "./reply-context"
+
 import { ShareButton } from "./share-button"
+import { WebmentionAdoptionLink } from "./webmention-adoption-link"
 
 interface ArticleReaderProps {
   article: Article
+  animateEntry?: boolean
   onClose: () => void
   onSave: () => void
   onDismiss: () => void
   onTagClick: (tag: string) => void
 }
 
-export function ArticleReader({ article, onClose, onSave, onDismiss, onTagClick }: ArticleReaderProps) {
+export function ArticleReader({ article, onClose, onSave, onDismiss, onTagClick, animateEntry = true }: ArticleReaderProps) {
   const { ref, titleId, present } = useReaderDialog(onClose)
   const reducedMotion = useReducedMotion()
 
@@ -30,7 +35,7 @@ export function ArticleReader({ article, onClose, onSave, onDismiss, onTagClick 
       inert={!present}
       tabIndex={-1}
       data-reader-dialog={present ? "active" : "exiting"}
-      initial={{ opacity: 0, y: reducedMotion ? 0 : 50 }}
+      initial={animateEntry ? { opacity: 0, y: reducedMotion ? 0 : 50 } : false}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: reducedMotion ? 0 : 50 }}
       transition={{ duration: reducedMotion ? 0 : 0.2 }}
@@ -69,7 +74,7 @@ export function ArticleReader({ article, onClose, onSave, onDismiss, onTagClick 
       </div>
 
       {/* Content */}
-      <article className="max-w-3xl mx-auto px-4 py-8 pb-[calc(5rem+env(safe-area-inset-bottom))]">
+      <article className="h-entry max-w-3xl mx-auto px-4 py-8 pb-[calc(5rem+env(safe-area-inset-bottom))]">
         {/* Tags */}
         {article.tags && article.tags.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-6">
@@ -87,7 +92,10 @@ export function ArticleReader({ article, onClose, onSave, onDismiss, onTagClick 
           </div>
         )}
 
-        <h1 id={titleId} className="text-3xl md:text-4xl font-bold text-foreground mb-4 leading-tight">{article.title}</h1>
+        <h1 id={titleId} className="p-name text-3xl md:text-4xl font-bold text-foreground mb-4 leading-tight">{article.title}</h1>
+
+        <a className="u-url inline-block mb-4 text-sm underline text-muted-foreground" href={`https://bathos.org${postPath(article.slug)}`}>Permalink</a>
+        <ReplyContext inReplyTo={article.inReplyTo} />
 
         {article.date && (
           <p className="text-muted-foreground mb-8">
@@ -99,9 +107,10 @@ export function ArticleReader({ article, onClose, onSave, onDismiss, onTagClick 
           </p>
         )}
 
-        <div className="article-prose">
+        <div className="e-content article-prose">
           <ReactMarkdown>{article.content}</ReactMarkdown>
         </div>
+        <WebmentionAdoptionLink targetUrl={`https://bathos.org${postPath(article.slug)}`} />
       </article>
     </motion.div>
   )

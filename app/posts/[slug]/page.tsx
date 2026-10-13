@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { getAllArticles, getAllTags } from "@/lib/articles"
 import { postPath } from "@/lib/post-links"
+import { ReplyContext } from "@/components/reply-context"
 import { SwipeFeed } from "@/components/swipe-feed"
 
 export const dynamicParams = false
@@ -37,6 +38,7 @@ export default async function Post({ params }: Props) {
         <style>{`[data-swipe-reader] { display: none !important; }`}</style>
         <main className="mx-auto max-w-3xl p-6">
           <h1 className="text-3xl font-bold">{article.title}</h1>
+          <ReplyContext inReplyTo={article.inReplyTo} />
           <p className="mt-4"><a className="text-accent underline" href={`/read/${encodeURIComponent(article.slug)}/`}>Read this article without JavaScript</a></p>
           <p className="mt-4"><a className="text-accent underline" href="/articles/">Browse all articles</a></p>
         </main>
