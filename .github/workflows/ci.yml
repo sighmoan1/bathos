@@ -49,3 +49,6 @@ jobs:
         run: pnpm exec tsc --noEmit
       - name: Run release validation
         run: pnpm verify:release
+      - name: Validate enabled Webmention responses when present
+        if: ${{ hashFiles('workers/webmention/package-lock.json') != '' }}
+        run: pnpm verify:webmentions-enabled
