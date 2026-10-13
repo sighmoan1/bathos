@@ -7,7 +7,7 @@ import "./globals.css"
 export const metadata: Metadata = {
   title: "Bathos Reader",
   description: "Swipe through Bathos articles, save your favourites and read offline.",
-  alternates: { types: { "application/rss+xml": "https://bathos.org/rss.xml" } },
+  alternates: { types: { "application/rss+xml": "https://bathos.org/rss.xml", "application/json": "https://bathos.org/articles.json" } },
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, title: "Bathos", statusBarStyle: "black-translucent" },
   icons: { icon: [{ url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }], apple: [{ url: "/icons/apple-icon.png", sizes: "180x180", type: "image/png" }] },
@@ -30,6 +30,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <link rel="sitemap" type="application/xml" href="https://bathos.org/sitemap.xml" />
+        <link rel="describedby" type="application/json" href="https://bathos.org/articles.json" />
+      </head>
       <body className={`font-sans antialiased`}>
         {children}
         {process.env.VERCEL === "1" && <Analytics />}
