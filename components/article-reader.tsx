@@ -2,7 +2,7 @@
 
 import { ArrowLeft, Bookmark, Trash2 } from "lucide-react"
 import type { Article } from "@/lib/articles"
-import ReactMarkdown from "react-markdown"
+import { ArticleMarkdownContent } from "./article-markdown"
 import { motion, useReducedMotion } from "framer-motion"
 import { useReaderDialog } from "@/lib/use-reader-dialog"
 
@@ -109,7 +109,7 @@ export function ArticleReader({ article, onClose, onSave, onDismiss, onTagClick,
         )}
 
         <div className="e-content article-prose">
-          <ReactMarkdown>{article.content}</ReactMarkdown>
+          <ArticleMarkdownContent>{article.content}</ArticleMarkdownContent>
         </div>
         <WebmentionResponses target={`https://bathos.org${postPath(article.slug)}`} />
         <WebmentionAdoptionLink targetUrl={`https://bathos.org${postPath(article.slug)}`} />
