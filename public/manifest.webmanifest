@@ -2,7 +2,7 @@
   "id": "/",
   "name": "Bathos Reader",
   "short_name": "Bathos",
-  "description": "Swipe through Bathos articles, save your favourites and read offline.",
+  "description": "Swipe through Bathos articles, save your favourites.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

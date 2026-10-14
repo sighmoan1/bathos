@@ -13,19 +13,15 @@ export interface ReaderPwa {
   showHelp: boolean
   closeHelp: () => void
   install: () => Promise<void>
-  waiting: ServiceWorker | null
-  applyUpdate: () => void
 }
 
 /**
- * Install prompt and offline-cache registration. Kept as a hook so the header
- * can place its controls in a menu while registration runs from first load.
+ * Install prompt and legacy reader cache cleanup.
  */
 export function useReaderPwa(): ReaderPwa {
   const [prompt, setPrompt] = useState<InstallPrompt | null>(null)
   const [installed, setInstalled] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
-  const [waiting, setWaiting] = useState<ServiceWorker | null>(null)
 
   useEffect(() => {
     setInstalled(window.matchMedia("(display-mode: standalone)").matches || Boolean((navigator as Navigator & { standalone?: boolean }).standalone))
@@ -33,28 +29,16 @@ export function useReaderPwa(): ReaderPwa {
     const onInstalled = () => { setInstalled(true); setPrompt(null); setShowHelp(false) }
     window.addEventListener("beforeinstallprompt", beforeInstall)
     window.addEventListener("appinstalled", onInstalled)
-    let active = true
-    let reloadOnChange = false
-    const onControllerChange = () => { if (reloadOnChange) window.location.reload() }
-    navigator.serviceWorker?.addEventListener("controllerchange", onControllerChange)
-    if (process.env.NODE_ENV === "production" && "serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" }).then(registration => {
-        if (!active) return
-        const checkUpdate = () => {
-          if (active && registration.waiting && navigator.serviceWorker.controller) {
-            reloadOnChange = true
-            setWaiting(registration.waiting)
-          }
-        }
-        checkUpdate()
-        registration.addEventListener("updatefound", () => registration.installing?.addEventListener("statechange", checkUpdate))
-      }).catch(error => console.warn("Reader offline setup failed", error))
+    // Remove only the retired root reader registration and reader-owned caches.
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.getRegistrations().then(async registrations => {
+        await Promise.all(registrations.filter(registration => registration.scope === new URL("/", window.location.origin).href).map(registration => registration.unregister()))
+        if ("caches" in window) await Promise.all((await caches.keys()).filter(key => key.startsWith("bathos-reader-")).map(key => caches.delete(key)))
+      }).catch(error => console.warn("Reader cache cleanup failed", error))
     }
     return () => {
-      active = false
       window.removeEventListener("beforeinstallprompt", beforeInstall)
       window.removeEventListener("appinstalled", onInstalled)
-      navigator.serviceWorker?.removeEventListener("controllerchange", onControllerChange)
     }
   }, [])
 
@@ -67,9 +51,8 @@ export function useReaderPwa(): ReaderPwa {
   }, [prompt])
 
   const closeHelp = useCallback(() => setShowHelp(false), [])
-  const applyUpdate = useCallback(() => waiting?.postMessage({ type: "SKIP_WAITING" }), [waiting])
 
-  return { installed, showHelp, closeHelp, install, waiting, applyUpdate }
+  return { installed, showHelp, closeHelp, install }
 }
 
 export function InstallHelp({ onClose }: { onClose: () => void }) {
@@ -79,7 +62,7 @@ export function InstallHelp({ onClose }: { onClose: () => void }) {
         <strong>Install Bathos</strong>
         <button onClick={onClose} aria-label="Close installation instructions" className="feed-icon-button"><X className="w-5 h-5" /></button>
       </div>
-      <p className="text-sm text-muted-foreground max-w-prose">On iPhone or iPad, open in Safari and choose Share → Add to Home Screen. On Android or desktop, use your browser’s Install app or Add to Home screen option when available. Visit online once to make articles available offline.</p>
+      <p className="text-sm text-muted-foreground max-w-prose">On iPhone or iPad, open in Safari and choose Share → Add to Home Screen. On Android or desktop, use your browser’s Install app or Add to Home screen option when available. Articles need an internet connection.</p>
     </div>
   )
 }

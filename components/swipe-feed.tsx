@@ -124,7 +124,7 @@ export function SwipeFeed({ initialArticles, allTags, initialReadingArticle }: S
   const hasArticles = articles.length > 0
 
   // Count only bookmarks that resolve in this catalog, just like the saved list.
-  // Keep stored slugs so restored posts and older offline catalogs retain bookmarks.
+  // Keep stored slugs so restored posts retain bookmarks.
   const savedArticles = initialArticles.filter((a) => saved.includes(a.slug))
   const trashedArticles = initialArticles.filter((a) => dismissed.includes(a.slug))
 
@@ -411,9 +411,6 @@ export function SwipeFeed({ initialArticles, allTags, initialReadingArticle }: S
             </nav>
 
             <div className="feed-tools">
-              {pwa.waiting && (
-                <button className="feed-update" onClick={pwa.applyUpdate}>Update app</button>
-              )}
               <button
                 onClick={() => {
                   setShowFilters((prev) => !prev)

@@ -7,10 +7,11 @@ The owner wants completed project changes deployed automatically. Unless the use
 - Keep unrelated local changes out of commits. Always create a separate Git worktree and task branch from current `origin/main` before implementation. Never switch branches, edit files, stage changes, or run builds in another agent’s worktree.
 - GitHub Actions CI is enabled. The required `Release checks` job in `.github/workflows/ci.yml` installs locked dependencies and runs `pnpm exec tsc --noEmit`, `pnpm verify:release` and, when the receiving Worker exists, `pnpm verify:webmentions-enabled` (Node tests, worker tests, build, desktop/Android reader tests and mobile manager checks). Before merging, also validate locally with `pnpm install --frozen-lockfile`, `npm ci --prefix workers/admin-oauth`, `npm ci --prefix workers/webmention` when its lockfile exists, `pnpm exec tsc --noEmit`, and `pnpm verify:release`. When the receiving Worker exists, also run `pnpm verify:webmentions-enabled` to test the enabled response UI and restore the disabled export. Install Chromium with `pnpm exec playwright install chromium` when needed. Record results in the pull request.
 - Require successful `Release checks` and Cloudflare Pages checks for the exact PR head commit before merging. Respect branch protections; do not bypass failed CI, local tests or hosting builds or force-push. See `docs/ci.md` for the CI security policy and protected publishing flow.
+- Cloudflare Pages and Workers are the hosting platform. The owner abandoned the DigitalOcean option on 14 October 2026; PR #21 is closed without merging. Do not revive that migration as part of routine delivery.
 - Production is https://bathos.org. The Git-connected Cloudflare Pages project is `bathos-web`; it builds `pnpm build` from `main` and publishes `out`.
 - Wait for the deployment of the exact merged commit and verify the affected behavior on production before saying the change is live.
 - If publishing fails or credentials are unavailable, explain the specific blocker and distinguish local changes, merged changes, and deployed changes.
-- The reader caches content for offline use. Check a fresh online page when verifying deployment, and account for stale service-worker caches when diagnosing old UI.
+- The reader requires a connection. Check a fresh online page when verifying deployment; the legacy root worker retires old reader caches. Preserve the manager’s separate offline shell and drafts.
 
 ## Concurrent work
 

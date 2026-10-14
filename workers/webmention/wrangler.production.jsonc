@@ -1,0 +1,51 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "bathos-webmention",
+  "account_id": "f548d682f856a4cc0b81501127128abd",
+  "main": "index.mjs",
+  "compatibility_date": "2026-10-13",
+  "compatibility_flags": [
+    "global_fetch_strictly_public"
+  ],
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [
+    {
+      "pattern": "bathos.org/api/webmention*",
+      "zone_id": "15caeeda0314a83a5feb2cd97dd4ade2"
+    }
+  ],
+  "triggers": {
+    "crons": [
+      "* * * * *"
+    ]
+  },
+  "vars": {
+    "ENABLED": "true",
+    "SITE_ORIGIN": "https://bathos.org"
+  },
+  "secrets": {
+    "required": [
+      "MODERATOR_TOKEN",
+      "RATE_SALT"
+    ]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "bathos-webmentions",
+      "database_id": "b630c2f4-821d-4115-a62b-1a8e49a78360",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "invocation_logs": false
+    },
+    "traces": {
+      "enabled": true
+    }
+  }
+}

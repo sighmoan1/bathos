@@ -82,6 +82,30 @@ test('changed source returns pending and deleted backlink retracts approval',asy
  remote.body='Removed backlink';await app.receive();assert.deepEqual(await (await app.responses()).json(),{responses:[]});
  remote.status=410;assert.equal((await app.receive()).status,200);
 });
+test('injected script/template changes preserve approval but meaningful body changes require review',async(t)=>{
+ const article=`<title>A reply</title><main><p>Original article body</p><a href="${target}">reply</a></main>`;
+ const remote={body:article+`<script>window.__CF$cv$params={r:'abc123'};</script><template>old inert content</template>`};
+ const app=await setup(remote);t.after(()=>app.mf.dispose());
+ assert.equal((await app.receive()).status,202);
+ const before=await app.db.prepare('SELECT fingerprint FROM mentions WHERE source=?').bind(source).first();
+ remote.body=article+`<script data-ray="changed">window.__CF$cv$params={r:'def456'};</script><template><a href="https://evil.site/">new inert content</a></template>`;
+ assert.equal((await app.moderate('approved')).status,200);
+ assert.equal((await app.receive()).status,202);
+ const unchanged=await app.db.prepare('SELECT fingerprint,state FROM mentions WHERE source=?').bind(source).first();
+ assert.equal(unchanged.fingerprint,before.fingerprint);assert.equal(unchanged.state,'approved');
+ const worker=await app.mf.getWorker();await worker.scheduled({scheduledTime:Date.now(),cron:'* * * * *'});
+ assert.equal((await (await app.responses()).json()).responses.length,1);
+ remote.body=remote.body.replace('Original article body','Meaningfully changed article body');
+ assert.equal((await app.moderate('approved')).status,409);
+ assert.equal((await app.receive()).status,202);
+ const changed=await app.db.prepare('SELECT fingerprint,state FROM mentions WHERE source=?').bind(source).first();
+ assert.notEqual(changed.fingerprint,before.fingerprint);assert.equal(changed.state,'pending');
+ assert.deepEqual(await (await app.responses()).json(),{responses:[]});
+ assert.equal((await app.moderate('approved')).status,200);
+ remote.body=article.replace(`<a href="${target}">reply</a>`,`<script><a href="${target}">fake</a></script><template><a href="${target}">fake</a></template>`);
+ assert.equal((await app.receive()).status,200);
+ assert.equal((await app.db.prepare('SELECT COUNT(*) n FROM mentions').first()).n,0);
+});
 test('malformed JSON moderation objects, foreign CORS and read quota',async(t)=>{
  const app=await setup();t.after(()=>app.mf.dispose());
  for(const body of ['null','[]','{"state":"approved"}']) assert.equal((await app.send('/api/webmention/admin',{method:'POST',headers:{authorization:`Bearer ${token}`},body})).status,400);

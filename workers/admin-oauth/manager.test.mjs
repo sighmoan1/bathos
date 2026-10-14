@@ -31,6 +31,20 @@ test('all mutations require exact Origin before authentication or upstream acces
  }
  const request=await req('/api/posts','POST',post);request.headers.delete('Origin');assert.equal((await handleRequest(request,env)).status,403);
 });
+test('pre-migration broad-scope sessions are rejected with the same secret', async()=>{
+ const bytes = Uint8Array.from(atob(env.SESSION_SECRET), c => c.charCodeAt(0));
+ const key = await crypto.subtle.importKey('raw', bytes, 'AES-GCM', false, ['encrypt']);
+ const iv = crypto.getRandomValues(new Uint8Array(12));
+ const encoder = new TextEncoder();
+ const encrypted = await crypto.subtle.encrypt({name:'AES-GCM',iv,additionalData:encoder.encode(env.CMS_ORIGIN)},key,encoder.encode(JSON.stringify({token:'old-broad-token',login:'writer',expires:Date.now()+60000})));
+ const encode = value => btoa(String.fromCharCode(...new Uint8Array(value))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+ const cookie = sessionCookie(`${encode(iv)}.${encode(encrypted)}`);
+ for (const [path,method,data] of [['/api/session','GET'],['/api/posts','POST',post]]) {
+  const response = await handleRequest(await req(path,method,data,{cookie}),env,()=>{throw Error('old token must never reach GitHub');});
+  assert.equal(response.status,401);
+  assert.match(response.headers.get('set-cookie'),/Max-Age=0/);
+ }
+});
 test('YAML serialization round-trips UTF8 multiline metadata and Markdown exactly',()=>{
  const parsed = parsePost(serializePost(post),post.slug,sha);
  assert.deepEqual(parsed,{...post,sha});
@@ -69,7 +83,7 @@ test('same-window OAuth flow checks push permission, issues cookie, redirects wi
  const start=await handleRequest(new Request('https://bathos.org/api/login'),env);const cookie=start.headers.get('set-cookie').split(';')[0], state=new URL(start.headers.get('location')).searchParams.get('state');
  let calls=0;
  const response=await handleRequest(new Request(`https://bathos.org/api/callback?state=${state}&code=code`,{headers:{Cookie:cookie}}),env,async(url,opts)=>{
-  if(++calls===1){assert.equal(typeof JSON.parse(opts.body).code_verifier,'string');return Response.json({access_token:'private-token'});}
+  if(++calls===1){assert.equal(typeof JSON.parse(opts.body).code_verifier,'string');return Response.json({access_token:'private-token',scope:' public_repo\t'});}
   if(calls===2)return Response.json({permissions:{push:true}});
   return Response.json({login:'writer'});
  });
@@ -81,7 +95,7 @@ test('same-window OAuth flow checks push permission, issues cookie, redirects wi
 test('manage OAuth denies repository write access and cancellation without exposing token',async()=>{
  for(const denied of [false,true]) {
   const start=await handleRequest(new Request('https://bathos.org/api/login'),env),state=new URL(start.headers.get('location')).searchParams.get('state');let calls=0;
-  const response=await handleRequest(new Request(`https://bathos.org/api/callback?state=${state}&code=code${denied?'&error=access_denied':''}`,{headers:{Cookie:start.headers.get('set-cookie').split(';')[0]}}),env,async()=>Response.json(++calls===1?{access_token:'private-token'}:{permissions:{push:false}}));
+  const response=await handleRequest(new Request(`https://bathos.org/api/callback?state=${state}&code=code${denied?'&error=access_denied':''}`,{headers:{Cookie:start.headers.get('set-cookie').split(';')[0]}}),env,async()=>Response.json(++calls===1?{access_token:'private-token',scope:'public_repo'}:{permissions:{push:false}}));
   assert.equal(response.status,303);assert.match(response.headers.get('location'),/auth_error=(permission|denied)/);assert.doesNotMatch(response.headers.get('set-cookie'),/__Host-bathos-session=/);
  }
 });
