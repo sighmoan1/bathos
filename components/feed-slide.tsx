@@ -136,7 +136,7 @@ export function FeedSlide({
                     title={`Filter by "${tag}"`}
                     className="feed-tag"
                   >
-                    {tag}
+                    <span>{tag}</span>
                   </button>
                 ))}
               </div>
@@ -145,13 +145,17 @@ export function FeedSlide({
             <h2 className="reader-title">
               <a
                 href={postPath(article.slug)}
+                // A native link drag would swallow mouse swipes that start on the title.
+                draggable={false}
                 onClick={(event) => {
                   if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
                   event.preventDefault()
                   guarded(onRead)(event)
                 }}
               >
-                {article.title}
+                {/* Framer Motion won't start a drag whose target is a link or
+                    button, so labels sit in spans to keep swipes working there. */}
+                <span>{article.title}</span>
               </a>
             </h2>
 
@@ -177,7 +181,7 @@ export function FeedSlide({
           </div>
 
           <button type="button" data-focus-key="read" onClick={guarded(onRead)} className="feed-read">
-            Read Article
+            <span>Read Article</span>
             <ArrowRight className="w-5 h-5" />
           </button>
         </motion.div>
