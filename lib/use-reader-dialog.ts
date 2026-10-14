@@ -62,7 +62,7 @@ export function useReaderDialog(onClose: () => void) {
         const active = document.activeElement
         if (active instanceof HTMLElement && active.matches(focusable) && !active.closest("[data-reader-dialog]")) return
         const target = opener?.isConnected && opener.matches(focusable) && !opener.closest('[inert], [aria-hidden="true"]') ? opener : document.querySelector<HTMLElement>('[data-dialog-fallback]')
-        target?.focus()
+        target?.focus({ preventScroll: true })
       })
     }
   }, [present])

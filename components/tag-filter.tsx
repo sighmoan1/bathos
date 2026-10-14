@@ -8,50 +8,42 @@ interface TagFilterProps {
   selected: string[]
   onToggle: (tag: string) => void
   onClear: () => void
+  onDone: () => void
 }
 
 /**
- * Horizontally scrollable chip bar. Selecting several tags matches articles
- * carrying *any* of them (OR), so the deck widens rather than narrows.
+ * Topic sheet below the header. Selecting several tags matches articles
+ * carrying *any* of them (OR), so the feed widens rather than narrows.
  */
-export function TagFilter({ tags, selected, onToggle, onClear }: TagFilterProps) {
-  if (tags.length === 0) return null
-
+export function TagFilter({ tags, selected, onToggle, onClear, onDone }: TagFilterProps) {
   return (
-    <div className="reader-tag-filter flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-      <button
-        type="button"
-        onClick={onClear}
-        aria-pressed={selected.length === 0}
-        className={`shrink-0 flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-full border transition-colors ${
-          selected.length === 0
-            ? "bg-primary text-primary-foreground border-transparent"
-            : "bg-secondary text-secondary-foreground border-border hover:bg-secondary/70"
-        }`}
-      >
-        All
-        {selected.length > 0 && <X className="w-3 h-3" />}
-      </button>
-
-      {tags.map(({ tag, count }) => {
-        const isSelected = selected.includes(tag)
-        return (
+    <div className="feed-sheet" role="region" aria-label="Filter by topic">
+      <div className="flex items-center justify-between gap-3">
+        <strong>Topics</strong>
+        <div className="flex items-center gap-1">
+          {selected.length > 0 && (
+            <button type="button" onClick={onClear} className="feed-text-button">
+              <X className="w-4 h-4" />
+              Clear
+            </button>
+          )}
+          <button type="button" onClick={onDone} className="feed-text-button feed-text-button-strong">Done</button>
+        </div>
+      </div>
+      <div className="feed-tag-filter">
+        {tags.map(({ tag, count }) => (
           <button
             key={tag}
             type="button"
             onClick={() => onToggle(tag)}
-            aria-pressed={isSelected}
-            className={`shrink-0 px-3 py-1 text-xs font-medium rounded-full border transition-colors ${
-              isSelected
-                ? "bg-accent text-accent-foreground border-transparent"
-                : "bg-secondary text-secondary-foreground border-border hover:bg-secondary/70"
-            }`}
+            aria-pressed={selected.includes(tag)}
+            className="feed-chip"
           >
             {tag}
-            <span className="ml-1.5 opacity-60">{count}</span>
+            <span className="feed-chip-count">{count}</span>
           </button>
-        )
-      })}
+        ))}
+      </div>
     </div>
   )
 }

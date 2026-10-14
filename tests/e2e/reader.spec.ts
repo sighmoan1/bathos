@@ -1,44 +1,49 @@
 import {test,expect} from '@playwright/test';
+import { current, currentTitle, openMenuItem, press, readButton } from './feed-helpers'
+
 test('shared theme retains readable recipes and keyboard controls',async({page})=>{
  page.on('pageerror', e => console.log('Browser error:',e.message));
- page.on('requestfailed',r=>console.log('Failed request:',r.url(),r.failure()?.errorText));
  await page.goto('/');
- const heading=page.getByRole('heading',{level:2}).first();
+ const heading=currentTitle(page);
  await expect(heading).toBeVisible();
  const initialTitle=await heading.textContent();
- await page.getByRole('button',{name:'Next',exact:true}).click();
- await expect(heading).not.toHaveText(initialTitle!);
- await page.getByRole('button',{name:'Previous',exact:true}).click();
- await expect(heading).toHaveText(initialTitle!);
- await page.getByRole('button',{name:'Read Article',exact:true}).click();
+ await press(page,'ArrowDown');
+ await expect(currentTitle(page)).not.toHaveText(initialTitle!);
+ await press(page,'ArrowUp');
+ await expect(currentTitle(page)).toHaveText(initialTitle!);
+ await readButton(page).click();
  await expect(page.getByRole('button',{name:/close|back/i}).first()).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  expect(await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--bathos-color-accent-light').trim())).toBe('#b599ed');
 });
 
-test('feed fills desktop, mobile and short landscape viewports', async ({ page }) => {
+test('each post fills the screen at desktop, mobile and short landscape sizes', async ({ page }) => {
   for (const viewport of [{ width: 1920, height: 1080 }, { width: 1366, height: 768 }, { width: 390, height: 844 }, { width: 667, height: 375 }]) {
     await page.setViewportSize(viewport)
     await page.goto('/')
-    await expect(page.getByRole('button', { name: 'Read Article', exact: true })).toBeVisible()
-    const card = await page.locator('.reader-card-surface').boundingBox()
-    expect(card!.width).toBeGreaterThan(viewport.width * .9)
-    expect(card!.height).toBeGreaterThan(viewport.height * .5)
+    await expect(readButton(page)).toBeInViewport({ ratio: 1 })
+    const slide = await current(page).boundingBox()
+    expect(Math.round(slide!.height)).toBe(viewport.height)
+    expect(Math.round(slide!.width)).toBe(viewport.width)
+    const card = await current(page).locator('.feed-card').boundingBox()
+    expect(card!.width).toBeGreaterThan(Math.min(viewport.width * .6, 600))
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.documentElement.scrollHeight <= innerHeight)).toBe(true)
+    for (const name of ['Save', 'Bin', 'Share this article']) await expect(current(page).getByRole('button', { name, exact: true })).toBeInViewport({ ratio: 1 })
     await page.getByRole('button', { name: 'Filter by tag' }).click()
-    await expect(page.getByRole('button', { name: 'Read Article', exact: true })).toBeInViewport()
-    await page.getByRole('button', { name: 'Filter by tag' }).click()
+    await expect(page.getByRole('region', { name: 'Filter by topic' })).toBeVisible()
+    await page.getByRole('button', { name: 'Done', exact: true }).click()
+    await expect(page.getByRole('region', { name: 'Filter by topic' })).toHaveCount(0)
   }
 })
 
 test('reader manifest, installation guidance and offline reading', async ({ page, context }) => {
   await page.goto('/')
-  await expect(page.getByRole('button', { name: 'Read Article', exact: true })).toBeVisible()
+  await expect(readButton(page)).toBeVisible()
   const manifestURL = await page.locator('link[rel=manifest]').getAttribute('href')
   const manifest = await (await page.request.get(manifestURL!)).json()
   expect(manifest).toMatchObject({ id: '/', start_url: '/', scope: '/', display: 'standalone' })
   for (const icon of manifest.icons) expect((await page.request.get(icon.src)).ok()).toBe(true)
-  await page.getByRole('button', { name: 'Install Bathos', exact: true }).click()
+  await openMenuItem(page, 'Install Bathos')
   await expect(page.getByRole('region', { name: 'Install Bathos instructions' })).toContainText('Add to Home Screen')
   await page.getByRole('button', { name: 'Close installation instructions' }).click()
   await page.evaluate(() => navigator.serviceWorker.ready)
@@ -46,14 +51,14 @@ test('reader manifest, installation guidance and offline reading', async ({ page
   const caches = await page.evaluate(async () => (await Promise.all((await window.caches.keys()).map(async key => (await (await window.caches.open(key)).keys()).map(request => new URL(request.url).pathname)))).flat())
   expect(caches).toContain('/')
   expect(caches.some(url => /^\/(api|manage|admin)(\/|$)/.test(url))).toBe(false)
-  await page.getByRole('button', { name: 'Save', exact: true }).click()
+  await current(page).getByRole('button', { name: 'Save', exact: true }).click()
   await context.setOffline(true)
   await page.reload()
-  await expect(page.getByRole('button', { name: 'Read Article', exact: true })).toBeVisible()
+  await expect(readButton(page)).toBeVisible()
   await page.getByRole('button', { name: 'Open saved articles' }).click()
   await expect(page.getByRole('heading', { name: 'Saved Articles' })).toBeVisible()
   await page.getByRole('button', { name: 'Back', exact: true }).click()
-  await page.getByRole('button', { name: 'Read Article', exact: true }).click()
+  await readButton(page).click()
   await expect(page.locator('article h1')).toBeVisible()
   await expect(page.locator('article')).not.toBeEmpty()
   await context.setOffline(false)
@@ -61,6 +66,7 @@ test('reader manifest, installation guidance and offline reading', async ({ page
 
 test('browser install prompt is offered once and hidden after installation', async ({ page }) => {
   await page.goto('/')
+  await page.getByRole('button', { name: 'More options' }).click()
   await expect(page.getByRole('button', { name: 'Install Bathos', exact: true })).toBeVisible()
   await page.evaluate(() => {
     const event = new Event('beforeinstallprompt', { cancelable: true })
@@ -70,6 +76,8 @@ test('browser install prompt is offered once and hidden after installation', asy
   await page.getByRole('button', { name: 'Install Bathos', exact: true }).click()
   expect(await page.evaluate(() => (window as any).__prompted)).toBe(true)
   await page.evaluate(() => window.dispatchEvent(new Event('appinstalled')))
+  await page.getByRole('button', { name: 'More options' }).click()
+  await expect(page.getByRole('button', { name: 'Open binned articles' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Install Bathos', exact: true })).toHaveCount(0)
 })
 
@@ -92,7 +100,7 @@ test('reader and manager retain separate offline shells', async ({ page, context
   await page.reload()
   await expect(page.getByRole('heading', { name: /Manage posts/i })).toBeVisible()
   await page.goto('/')
-  await expect(page.getByRole('button', { name: 'Read Article', exact: true })).toBeVisible()
+  await expect(readButton(page)).toBeVisible()
   await context.setOffline(false)
 })
 
@@ -103,26 +111,27 @@ test('phone UI remains readable in normal and desktop-requested viewports', asyn
     await page.goto('/')
     await expect(page.locator('html')).toHaveClass(/reader-phone/)
     const scale = viewport.width / 390
-    const controls = await page.getByRole('button', { name: 'Filter by tag' }).boundingBox()
-    expect(controls!.width / scale).toBeGreaterThanOrEqual(43.9)
-    expect(controls!.height / scale).toBeGreaterThanOrEqual(43.9)
-    const titleSize = await page.locator('.reader-title').evaluate(element => parseFloat(getComputedStyle(element).fontSize))
-    expect(titleSize / scale).toBeGreaterThanOrEqual(31)
-    await expect(page.locator('.reader-key-hint').first()).toBeHidden()
-    await expect(page.locator('.reader-mobile-preview')).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Save this article', exact: true })).toBeHidden()
-    const content = await page.locator('.reader-card-content').boundingBox()
-    const title = await page.locator('.reader-title').boundingBox()
-    expect((title!.y - content!.y) / scale).toBeLessThan(140)
+    for (const control of [page.getByRole('button', { name: 'Filter by tag' }), current(page).getByRole('button', { name: 'Save', exact: true }), current(page).getByRole('button', { name: 'Bin', exact: true })]) {
+      const box = await control.boundingBox()
+      expect(box!.width / scale).toBeGreaterThanOrEqual(43.9)
+      expect(box!.height / scale).toBeGreaterThanOrEqual(43.9)
+    }
+    const titleSize = await currentTitle(page).evaluate(element => parseFloat(getComputedStyle(element).fontSize))
+    expect(titleSize / scale).toBeGreaterThanOrEqual(29)
+    await expect(current(page).locator('.feed-preview')).toBeVisible()
+    // Wide-screen previous/next arrows give way to swiping on phones.
+    await expect(page.getByRole('button', { name: 'Next', exact: true })).toBeHidden()
+    const slide = await current(page).boundingBox()
+    const title = await currentTitle(page).boundingBox()
+    expect((title!.y - slide!.y) / scale).toBeLessThan(160)
     await page.getByRole('button', { name: 'Filter by tag' }).click()
-    const tag = await page.locator('.reader-tag-filter button').first().boundingBox()
+    const tag = await page.locator('.feed-tag-filter button').first().boundingBox()
     expect(tag!.height / scale).toBeGreaterThanOrEqual(43.9)
-    await expect(page.getByRole('button', { name: 'Read Article', exact: true })).toBeInViewport()
+    await expect(readButton(page)).toBeInViewport()
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await context.close()
   }
 })
-
 
 test('bookmark count matches available saved articles after posts are removed', async ({ page }) => {
   const missing = ['victoria-sponge', 'sticky-ginger-parkin', 'new-york-cheesecake']
@@ -137,8 +146,10 @@ test('bookmark count matches available saved articles after posts are removed', 
   await expect(page.getByText('No saved articles yet', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Back', exact: true }).click()
 
-  const title = await page.locator('.reader-title').textContent()
-  await page.getByRole('button', { name: 'Save', exact: true }).click()
+  const title = await currentTitle(page).textContent()
+  const save = current(page).getByRole('button', { name: 'Save', exact: true })
+  await save.click()
+  await expect(save).toHaveAttribute('aria-pressed', 'true')
   await expect(savedButton.locator('span')).toHaveText('1')
   // Include a duplicate and deleted posts: the list still contains one article.
   await page.evaluate(() => {
@@ -153,4 +164,20 @@ test('bookmark count matches available saved articles after posts are removed', 
   await expect(page.getByText('No saved articles yet', { exact: true })).toBeVisible()
   await expect(savedButton.locator('span')).toHaveCount(0)
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('swipe-reader-saved')!))).toEqual(missing)
+})
+
+test('binning shows an undo, and the end of the feed offers a way back', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto('/')
+  const first = await currentTitle(page).innerText()
+  await current(page).getByRole('button', { name: 'Bin', exact: true }).click()
+  await expect(currentTitle(page)).not.toHaveText(first)
+  await page.getByRole('button', { name: 'Undo', exact: true }).click()
+  await expect(currentTitle(page)).toHaveText(first)
+  const total = await page.locator('.feed-slide:not(.feed-end)').count()
+  for (let i = 0; i < total; i++) await press(page, 'ArrowDown')
+  await expect(current(page)).toHaveAttribute('aria-label', 'End of feed')
+  await expect(page.getByRole('heading', { name: /all caught up/ })).toBeVisible()
+  await page.getByRole('button', { name: 'Back to the first post', exact: true }).click()
+  await expect(currentTitle(page)).toHaveText(first)
 })

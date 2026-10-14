@@ -1,14 +1,27 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { Download, X } from "lucide-react"
+import { useCallback, useEffect, useState } from "react"
+import { X } from "lucide-react"
 
 type InstallPrompt = Event & {
   prompt: () => Promise<void>
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>
 }
 
-export function ReaderPwa() {
+export interface ReaderPwa {
+  installed: boolean
+  showHelp: boolean
+  closeHelp: () => void
+  install: () => Promise<void>
+  waiting: ServiceWorker | null
+  applyUpdate: () => void
+}
+
+/**
+ * Install prompt and offline-cache registration. Kept as a hook so the header
+ * can place its controls in a menu while registration runs from first load.
+ */
+export function useReaderPwa(): ReaderPwa {
   const [prompt, setPrompt] = useState<InstallPrompt | null>(null)
   const [installed, setInstalled] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
@@ -45,20 +58,28 @@ export function ReaderPwa() {
     }
   }, [])
 
-  async function install() {
+  const install = useCallback(async () => {
     if (!prompt) { setShowHelp(value => !value); return }
     await prompt.prompt()
     const choice = await prompt.userChoice
     setPrompt(null)
     if (choice.outcome === "accepted") setShowHelp(false)
-  }
+  }, [prompt])
 
-  return <>
-    {waiting && <button className="px-3 py-2 rounded-lg bg-accent text-accent-foreground text-sm" onClick={() => waiting.postMessage({ type: "SKIP_WAITING" })}>Update app</button>}
-    {!installed && <button onClick={install} aria-label="Install Bathos" aria-expanded={showHelp} className="p-2 rounded-lg hover:bg-secondary transition-colors"><Download className="w-5 h-5" /></button>}
-    {showHelp && <div className="absolute top-full inset-x-0 border-b border-border bg-card p-4 shadow-xl" role="region" aria-label="Install Bathos instructions">
-      <div className="flex items-center justify-between gap-4"><strong>Install Bathos</strong><button onClick={() => setShowHelp(false)} aria-label="Close installation instructions" className="p-2 rounded-lg hover:bg-secondary"><X className="w-5 h-5" /></button></div>
+  const closeHelp = useCallback(() => setShowHelp(false), [])
+  const applyUpdate = useCallback(() => waiting?.postMessage({ type: "SKIP_WAITING" }), [waiting])
+
+  return { installed, showHelp, closeHelp, install, waiting, applyUpdate }
+}
+
+export function InstallHelp({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="feed-sheet" role="region" aria-label="Install Bathos instructions">
+      <div className="flex items-center justify-between gap-4">
+        <strong>Install Bathos</strong>
+        <button onClick={onClose} aria-label="Close installation instructions" className="feed-icon-button"><X className="w-5 h-5" /></button>
+      </div>
       <p className="text-sm text-muted-foreground max-w-prose">On iPhone or iPad, open in Safari and choose Share → Add to Home Screen. On Android or desktop, use your browser’s Install app or Add to Home screen option when available. Visit online once to make articles available offline.</p>
-    </div>}
-  </>
+    </div>
+  )
 }

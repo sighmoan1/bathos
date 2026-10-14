@@ -85,7 +85,7 @@ const HORIZONTAL_DOMINANCE = 1.4
 
 /**
  * Two-finger trackpad / wheel navigation on both axes: vertical moves through
- * the deck, horizontal skips and saves, mirroring the touch swipe directions.
+ * the feed, horizontal bins and saves, mirroring the touch swipe directions.
  *
  * Deltas are accumulated across each gesture and the axis is decided once the
  * gesture is big enough to read, rather than from the first (tiny, ambiguous)
@@ -110,12 +110,9 @@ export function useFeedWheel(
     let fired = false
 
     const onWheel = (event: WheelEvent) => {
-      // Chrome reads a horizontal two-finger swipe as browser back/forward.
-      // Claim it before it gets that far. Vertical events are left alone so a
-      // short viewport can still scroll normally.
-      if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) {
-        event.preventDefault()
-      }
+      // The feed owns both axes: one gesture moves exactly one post, and a
+      // sideways swipe must not become browser back/forward in Chrome.
+      event.preventDefault()
 
       const now = Date.now()
       if (now - lastEventAt > GESTURE_GAP_MS) {
