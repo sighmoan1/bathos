@@ -88,6 +88,10 @@ test('bin panel actions are named and reduced motion retains navigation', async 
   await expect(list.getByText('Nothing in the bin', { exact: true })).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(page.getByRole('dialog')).toHaveCount(0)
+  // Closing the menu-owned dialog restores the fallback on the next frame.
+  // Wait for that lifecycle before blurring focus for global navigation.
+  await expect(page.getByRole('button', { name: 'Open saved articles', exact: true })).toBeFocused()
+  await expect(page.locator('[data-reader-background]')).not.toHaveAttribute('aria-hidden', 'true')
   const before = await currentTitle(page).innerText()
   await press(page, 'ArrowDown')
   await expect(currentTitle(page)).not.toHaveText(before)

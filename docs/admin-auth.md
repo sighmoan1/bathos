@@ -14,9 +14,15 @@ The Worker configuration fixes `CMS_ORIGIN` and `OAUTH_ORIGIN` to `https://batho
 
 Every mutation requires the exact `Origin: https://bathos.org`. Post writes additionally require JSON, have a 128 KiB request limit, validate the complete field schema, and restrict filenames to lowercase letters, numbers and hyphens under `content/*.md`. Updates and deletions require the current GitHub blob SHA; conflicts return HTTP 409 without retrying. GitHub calls have ten-second timeouts. Errors contain generic messages rather than upstream bodies or secrets. Responses use `Cache-Control: no-store` and the manager service worker excludes all API requests from caching.
 
-`GET /api/session` reports only authentication and the account login. `POST /api/logout` clears the session cookie. Revoking the app authorization in GitHub invalidates its token. The cookie otherwise expires after seven days; user tokens are never refreshed automatically. This private repository requires GitHub OAuth's `repo` scope, which can cover other repositories available to the account, while Worker API calls target only the configured Bathos repository.
+`GET /api/session` reports only authentication and the account login. `POST /api/logout` clears the session cookie. Revoking the app authorization in GitHub invalidates its token. The cookie otherwise expires after seven days; user tokens are never refreshed automatically. The public repository uses `public_repo` scope. This still covers the account's other public repositories; Worker API calls target only the configured Bathos repository. The callback accepts only token exchanges explicitly reporting `public_repo`, rejecting broader or unknown scopes before accessing GitHub APIs.
 
-The old `/api/auth` popup endpoint remains for compatibility with legacy Decap clients. It retains the older browser-token handshake and is not used by the new manager. Invocation logging and tracing remain disabled to avoid capturing OAuth callback query strings; sanitized OAuth failure events are logged.
+The old `/api/auth` popup endpoint returns HTTP 410. Legacy Decap assets are removed, and callbacks with a legacy flow cookie are rejected before token exchange. Invocation logging and tracing remain disabled to avoid capturing OAuth callback query strings; sanitized OAuth failure events are logged.
+
+## Owner-approved grant migration
+
+Request owner approval before changing OAuth grants, app installations, or Worker secrets. Changing the requested scope does not revoke an existing `repo` authorization. The session encryption context now includes the public-only OAuth policy, so deploying this Worker rejects every pre-migration session even when `SESSION_SECRET` is preserved.
+
+After approval, revoke the Bathos OAuth app under GitHub Settings → Applications → Authorized OAuth Apps, optionally rotate the Worker's `SESSION_SECRET` as additional credential hygiene, deploy the Worker, and sign in again with `public_repo`. Tokens retaining `repo` scope receive `auth_error=scope` and no manager session. The scope check cannot reduce an existing grant by itself. Verify publishing with a temporary post and an account without push permission. A longer-term migration to a GitHub App installed only on Bathos can restrict the credential to this repository and minimum required Contents permissions.
 
 ## Verification and deployment
 

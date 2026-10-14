@@ -3,6 +3,9 @@ import { submitPublication, publicationStatus, validOperation, PublicationFailur
 export const SESSION_COOKIE = '__Host-bathos-session';
 const AGE = 7 * 86400, LIMIT = 128 * 1024;
 const encoder = new TextEncoder(), decoder = new TextDecoder('utf-8', { fatal: true });
+// Bind sessions to the public-only OAuth policy. Old broad-scope cookies must
+// require reauthorization even when the deployment preserves SESSION_SECRET.
+const sessionContext = env => encoder.encode(`${env.CMS_ORIGIN}|oauth-public-repo-v1`);
 const headers = { 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer', 'X-Content-Type-Options': 'nosniff' };
 const json = (data, status = 200, extra = {}) => Response.json(data, { status, headers: { ...headers, ...extra } });
 export const sessionCookie = (value, age = AGE) => `${SESSION_COOKIE}=${value}; Path=/; Max-Age=${age}; HttpOnly; Secure; SameSite=Lax`;
@@ -17,7 +20,7 @@ async function key(env) {
 }
 export async function sealSession(env, token, login, expires = Date.now() + AGE * 1000) {
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: encoder.encode(env.CMS_ORIGIN) }, await key(env), encoder.encode(JSON.stringify({ token, login, expires })));
+  const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: sessionContext(env) }, await key(env), encoder.encode(JSON.stringify({ token, login, expires })));
   return `${url64(iv)}.${url64(new Uint8Array(encrypted))}`;
 }
 async function session(request, env) {
@@ -26,7 +29,7 @@ async function session(request, env) {
     if (!value || value.length > 4096) return null;
     const parts = value.split('.');
     if (parts.length !== 2) return null;
-    const saved = JSON.parse(decoder.decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unurl64(parts[0]), additionalData: encoder.encode(env.CMS_ORIGIN) }, await key(env), unurl64(parts[1]))));
+    const saved = JSON.parse(decoder.decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unurl64(parts[0]), additionalData: sessionContext(env) }, await key(env), unurl64(parts[1]))));
     return typeof saved.token === 'string' && saved.token.length > 0 && typeof saved.login === 'string' && Number.isFinite(saved.expires) && saved.expires > Date.now() ? saved : null;
   } catch { return null; }
 }

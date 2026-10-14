@@ -5,7 +5,7 @@ import "./globals.css"
 
 export const metadata: Metadata = {
   title: "Bathos Reader",
-  description: "Swipe through Bathos articles, save your favourites and read offline.",
+  description: "Swipe through Bathos articles, save your favourites.",
   alternates: { types: { "application/rss+xml": "https://bathos.org/rss.xml", "application/json": "https://bathos.org/articles.json" } },
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, title: "Bathos", statusBarStyle: "black-translucent" },
