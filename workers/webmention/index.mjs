@@ -6,10 +6,14 @@ function targetURL(value, env) {
   if (url.origin !== env.SITE_ORIGIN || !/^\/posts\/[^/]+\/$/.test(url.pathname) || url.search) throw new HttpError(400, 'Target must be a canonical Bathos post');
   return url.href;
 }
+export async function reviewedHTML(html) {
+  // Inert markup and executable scripts are outside the server-reviewed content.
+  // Keep all remaining HTML, including body, metadata and backlink attributes.
+  return new HTMLRewriter().on('script, template',{element(element){element.remove();}}).transform(new Response(html)).text();
+}
 export async function inspectHTML(html, base, target, canonical = false) {
   let linked = false, title = '', author = '', published = null;
-  // Remove inert template contents before resolving the first HTML base element.
-  const active=await new HTMLRewriter().on('template',{element(element){element.remove();}}).transform(new Response(html)).text();
+  const active=await reviewedHTML(html);
   let documentBase=base,seenBase=false;
   await new HTMLRewriter().on('base[href]',{element(element){if(seenBase)return;seenBase=true;try{documentBase=new URL(decodeHTMLAttribute(element.getAttribute('href')),base).href;}catch{}}}).transform(new Response(active)).arrayBuffer();
   const rewriter = new HTMLRewriter()
@@ -28,9 +32,10 @@ export async function verify(source,target,env) {
   if (local.gone || local.url !== target || !(await inspectHTML(local.html,local.url,target,true)).linked) throw new HttpError(422,'Target is not a published canonical post');
   const remote = await safeHTML(source);
   if (remote.gone) return null;
-  const metadata = await inspectHTML(remote.html,remote.url,target);
+  const reviewed = await reviewedHTML(remote.html);
+  const metadata = await inspectHTML(reviewed,remote.url,target);
   if (!metadata.linked) return null;
-  return {...metadata,fingerprint:await digest(remote.html)};
+  return {...metadata,fingerprint:await digest(reviewed)};
 }
 async function limit(db,key,maximum,seconds,now) {
   const bucket = `${key}:${Math.floor(now/seconds)}`;
