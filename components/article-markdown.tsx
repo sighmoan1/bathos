@@ -40,8 +40,8 @@ function renderMarkdownTable(text: string): MarkdownNode | null {
 }
 
 function markdownText(node: MarkdownNode): string | null {
-  if (node.type === "text") return node.value ?? ""
-  if (node.type === "break") return "\n"
+  if (node.type === "break" || node.type === "softbreak" || node.type === "lineBreak") return "\n"
+  if (typeof node.value === "string") return node.value
   if (node.children) {
     const parts = node.children.map(markdownText)
     return parts.every((part) => part !== null) ? parts.join("") : null
