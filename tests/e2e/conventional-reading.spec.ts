@@ -33,13 +33,14 @@ for (const javaScriptEnabled of [false, true]) {
         const expectedHTML = renderToStaticMarkup(React.createElement(ReactMarkdown, { children: article.content, components: articleMarkdownComponents }))
         const normalizedHTML = await page.evaluate((html) => {
           const template = document.createElement('template')
-          template.innerHTML = html
+          template.innerHTML = html.replace(/<!--[\s\S]*?-->/g, '')
           // React 19 emits image preloads beside static markup; Next hoists them
           // into the document head. Compare the complete article body itself.
           template.content.querySelectorAll('link[rel="preload"][as="image"]').forEach(link => link.remove())
           return template.innerHTML
         }, expectedHTML)
-        expect(await page.locator('.article-prose').innerHTML()).toBe(normalizedHTML)
+        const actualHTML = await page.locator('.article-prose').evaluate(element => element.innerHTML.replace(/<!--[\s\S]*?-->/g, ''))
+        expect(actualHTML).toBe(normalizedHTML)
         await expect(page.getByRole('link', { name: 'Open in swipe reader' })).toHaveAttribute('href', `/posts/${encodeURIComponent(article.slug)}/`)
         await page.getByRole('link', { name: 'Back to all articles' }).click()
         await expect(page.getByRole('heading', { level: 1 })).toHaveText('Articles')
