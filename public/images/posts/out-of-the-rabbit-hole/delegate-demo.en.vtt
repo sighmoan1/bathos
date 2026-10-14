@@ -1,0 +1,178 @@
+WEBVTT
+
+00:00.000 --> 00:03.150
+This is a demonstration of an AI
+assistant
+
+00:03.150 --> 00:06.300
+using Delegate to complete a tax
+relief claim
+
+00:06.300 --> 00:09.450
+on someone's behalf. Everything shown
+here, including the
+
+00:09.450 --> 00:12.600
+account and tax details, is synthetic.
+This is
+
+00:12.600 --> 00:14.568
+not a live HMRC service.
+
+00:32.000 --> 00:34.647
+The request is simple: check and claim
+any
+
+00:34.647 --> 00:37.293
+working from home relief available.
+The assistant says
+
+00:37.293 --> 00:39.940
+it will follow the site's Delegate
+journey and
+
+00:39.940 --> 00:42.587
+pause where the person's identity or
+permission is
+
+00:42.587 --> 00:45.233
+needed. The service itself makes clear
+this is
+
+00:45.233 --> 00:45.895
+a prototype.
+
+01:00.000 --> 01:03.215
+On the Act for someone page, the
+assistant
+
+01:03.215 --> 01:06.430
+identifies itself as ChatGPT and
+selects only two
+
+01:06.430 --> 01:09.645
+permissions: viewing the tax code and
+claiming working
+
+01:09.645 --> 01:12.860
+from home relief. Other powers, such
+as changing
+
+01:12.860 --> 01:16.075
+employment or refund details, are left
+unchecked. The
+
+01:16.075 --> 01:18.486
+person gets a code to continue.
+
+01:32.000 --> 01:34.790
+The user signs into their GOV.UK
+account and
+
+01:34.790 --> 01:37.581
+completes the approval step on their
+phone. This
+
+01:37.581 --> 01:40.371
+is where the person authenticates and
+decides whether
+
+01:40.371 --> 01:43.162
+to grant the requested access. The
+assistant does
+
+01:43.162 --> 01:45.952
+not need the person's password or a
+copied
+
+01:45.952 --> 01:46.301
+session.
+
+02:06.000 --> 02:09.125
+After approval, the account lists
+ChatGPT as authorised
+
+02:09.125 --> 02:12.250
+for HMRC. The permission card shows
+the exact
+
+02:12.250 --> 02:15.376
+scope and offers a way to remove
+access.
+
+02:15.376 --> 02:18.501
+The HMRC demo then displays the
+synthetic tax
+
+02:18.501 --> 02:21.626
+account and the working from home
+claim option.
+
+02:40.000 --> 02:42.487
+Before submitting, the assistant
+checks the eligibility
+
+02:42.487 --> 02:45.330
+question with the user: they had to
+work
+
+02:45.330 --> 02:48.173
+from home and were not reimbursed. The
+answer
+
+02:48.173 --> 02:51.015
+is recorded in the prototype, and the
+assistant
+
+02:51.015 --> 02:53.858
+reviews the claim details against what
+the user
+
+02:53.858 --> 02:54.213
+confirmed.
+
+03:14.000 --> 03:17.058
+The service accepts the claim and
+displays a
+
+03:17.058 --> 03:20.116
+receipt. The assistant reports the
+outcome and reminds
+
+03:20.116 --> 03:23.174
+us this is a demonstration. The
+important pattern
+
+03:23.174 --> 03:26.232
+is visible: the assistant can do the
+routine
+
+03:26.232 --> 03:29.290
+steps, while identity, consent, and
+the claim's factual
+
+03:29.290 --> 03:31.201
+confirmation stay with the person.
+
+03:46.000 --> 03:48.758
+The user can also see who is
+authorised
+
+03:48.758 --> 03:51.516
+and revoke access. Delegate gives an
+agent a
+
+03:51.516 --> 03:54.274
+clear, limited route into a government
+service, with
+
+03:54.274 --> 03:57.031
+the service recording the action.
+Here, the whole
+
+03:57.031 --> 03:59.789
+journey uses synthetic data and does
+not make
+
+03:59.789 --> 04:00.824
+a real claim.

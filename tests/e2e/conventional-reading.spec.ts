@@ -3,7 +3,7 @@ import fs from 'node:fs'
 import matter from 'gray-matter'
 import { renderToStaticMarkup } from 'react-dom/server'
 import React from 'react'
-import ReactMarkdown from 'react-markdown'
+import { ArticleMarkdownContent } from '../../components/article-markdown'
 
 const articles = fs.readdirSync('content').filter(name => name.endsWith('.md')).map(name => {
   const { data, content } = matter(fs.readFileSync(`content/${name}`, 'utf8'))
@@ -29,16 +29,29 @@ for (const javaScriptEnabled of [false, true]) {
         await expect(page.locator('link[rel=canonical]')).toHaveAttribute('href', `https://bathos.org/posts/${encodeURIComponent(article.slug)}/`)
         // Compare the entire rendered Markdown, including the end of long articles,
         // with the current content source so new publishing is covered after rebuild.
-        const expectedHTML = renderToStaticMarkup(React.createElement(ReactMarkdown, { children: article.content }))
-        const normalizedHTML = await page.evaluate((html) => {
+        const expectedHTML = renderToStaticMarkup(React.createElement(ArticleMarkdownContent, { children: article.content }))
+        const [normalizedHTML, actualHTML] = await page.evaluate((values: string[]) => {
+          const [html, currentHTML] = values
+          const normalize = (input: string) => {
           const template = document.createElement('template')
-          template.innerHTML = html
+          template.innerHTML = input.replace(/<!--[\s\S]*?-->/g, '')
           // React 19 emits image preloads beside static markup; Next hoists them
           // into the document head. Compare the complete article body itself.
           template.content.querySelectorAll('link[rel="preload"][as="image"]').forEach(link => link.remove())
+          template.content.querySelectorAll('*').forEach(element => {
+            const attributes = Array.from(element.attributes).map(attribute => [attribute.name, attribute.name === 'style' ? (element as HTMLElement).style.cssText : attribute.value] as const).sort(([a], [b]) => a.localeCompare(b))
+            for (const attribute of Array.from(element.attributes)) element.removeAttribute(attribute.name)
+            for (const [name, value] of attributes) element.setAttribute(name, value)
+          })
           return template.innerHTML
-        }, expectedHTML)
-        expect(await page.locator('.article-prose').innerHTML()).toBe(normalizedHTML)
+          }
+          return [normalize(html), normalize(currentHTML)]
+        }, [expectedHTML, await page.locator('.article-prose').innerHTML()])
+        expect(actualHTML).toBe(normalizedHTML)
+        if (article.slug === 'out-of-the-rabbit-hole') {
+          await expect(page.locator('.article-prose table')).toHaveCount(1)
+          await expect(page.locator('.article-prose video track[kind="captions"]')).toHaveAttribute('src', '/images/posts/out-of-the-rabbit-hole/delegate-demo.en.vtt')
+        }
         await expect(page.getByRole('link', { name: 'Open in swipe reader' })).toHaveAttribute('href', `/posts/${encodeURIComponent(article.slug)}/`)
         await page.getByRole('link', { name: 'Back to all articles' }).click()
         await expect(page.getByRole('heading', { level: 1 })).toHaveText('Articles')
