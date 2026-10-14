@@ -1,5 +1,5 @@
 import type { Components } from "react-markdown"
-import { isValidElement, type ReactNode } from "react"
+import { Fragment, isValidElement, type ReactNode } from "react"
 
 const localVideoPath = /^\/images\/posts\/[A-Za-z0-9-]+(?:\/[A-Za-z0-9-]+)*\.mp4$/
 
@@ -44,8 +44,21 @@ function renderMarkdownTable(text: string) {
   )
 }
 
+function markdownText(children: ReactNode): string | null {
+  if (typeof children === "string") return children
+  if (Array.isArray(children)) {
+    const parts = children.map(markdownText)
+    return parts.every((part) => part !== null) ? parts.join("") : null
+  }
+  if (isValidElement<{ children?: ReactNode }>(children)) {
+    if (children.type === "br") return "\n"
+    if (children.type === Fragment) return markdownText(children.props.children)
+  }
+  return null
+}
+
 const ArticleMarkdownParagraph: NonNullable<Components["p"]> = ({ node: _node, children, ...props }) => {
-  const text = typeof children === "string" ? children : Array.isArray(children) && children.every((child): child is string => typeof child === "string") ? children.join("") : null
+  const text = markdownText(children)
   const table = text ? renderMarkdownTable(text) : null
   if (Array.isArray(children) && children.length === 1 && isValidElement(children[0]) && children[0].type === "figure") return children[0]
   return table ?? <p {...props}>{children as ReactNode}</p>

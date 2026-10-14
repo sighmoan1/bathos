@@ -41,6 +41,10 @@ for (const javaScriptEnabled of [false, true]) {
         }, expectedHTML)
         const actualHTML = await page.locator('.article-prose').evaluate(element => element.innerHTML.replace(/<!--[\s\S]*?-->/g, ''))
         expect(actualHTML).toBe(normalizedHTML)
+        if (article.slug === 'out-of-the-rabbit-hole') {
+          await expect(page.locator('.article-prose table')).toHaveCount(1)
+          await expect(page.locator('.article-prose video track[kind="captions"]')).toHaveAttribute('src', '/images/posts/out-of-the-rabbit-hole/delegate-demo.en.vtt')
+        }
         await expect(page.getByRole('link', { name: 'Open in swipe reader' })).toHaveAttribute('href', `/posts/${encodeURIComponent(article.slug)}/`)
         await page.getByRole('link', { name: 'Back to all articles' }).click()
         await expect(page.getByRole('heading', { level: 1 })).toHaveText('Articles')
