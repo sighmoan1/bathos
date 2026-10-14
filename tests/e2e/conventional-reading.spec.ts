@@ -31,7 +31,8 @@ for (const javaScriptEnabled of [false, true]) {
         // Compare the entire rendered Markdown, including the end of long articles,
         // with the current content source so new publishing is covered after rebuild.
         const expectedHTML = renderToStaticMarkup(React.createElement(ReactMarkdown, { children: article.content, components: articleMarkdownComponents, remarkPlugins: [remarkPipeTables as never] }))
-        const [normalizedHTML, actualHTML] = await page.evaluate(([html, currentHTML]: [string, string]) => {
+        const [normalizedHTML, actualHTML] = await page.evaluate((values: string[]) => {
+          const [html, currentHTML] = values
           const normalize = (input: string) => {
           const template = document.createElement('template')
           template.innerHTML = input.replace(/<!--[\s\S]*?-->/g, '')
