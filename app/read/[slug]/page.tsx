@@ -1,7 +1,6 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
-import ReactMarkdown from "react-markdown"
-import { articleMarkdownComponents, remarkPipeTables } from "@/components/article-markdown"
+import { ArticleMarkdownContent } from "@/components/article-markdown"
 import { WebmentionResponses } from "@/components/webmention-responses"
 import { getAllArticles } from "@/lib/articles"
 import { postPath } from "@/lib/post-links"
@@ -54,7 +53,7 @@ export default async function Read({ params }: Props) {
               {article.tags.map((tag) => <li key={tag}>{tag}</li>)}
             </ul>}
           </header>
-          <div className={`e-content article-prose ${styles.main}`}><ReactMarkdown remarkPlugins={[remarkPipeTables as never]} components={articleMarkdownComponents}>{article.content}</ReactMarkdown></div>
+          <div className={`e-content article-prose ${styles.main}`}><ArticleMarkdownContent>{article.content}</ArticleMarkdownContent></div>
           <WebmentionResponses target={`https://bathos.org${postPath(article.slug)}`} />
           <WebmentionAdoptionLink targetUrl={`https://bathos.org${postPath(article.slug)}`} />
         </article>
