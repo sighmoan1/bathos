@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import fs from 'node:fs'
+import { current, currentTitle, openMenuItem, readButton } from './feed-helpers'
 
 const slugs = fs.readdirSync('content').filter(name => name.endsWith('.md')).map(name => name.slice(0, -3))
 
@@ -28,9 +29,9 @@ test('every exported permalink renders content, metadata and survives reload des
 
 test('feed, saved and hidden posts open permalinks with browser history', async ({ page }) => {
   await page.goto('/')
-  const title = await page.getByRole('heading', { level: 2 }).first().textContent()
-  const href = await page.getByRole('heading', { level: 2 }).first().locator('a').getAttribute('href')
-  await page.getByRole('button', { name: 'Read Article', exact: true }).click()
+  const title = await currentTitle(page).textContent()
+  const href = await currentTitle(page).locator('a').getAttribute('href')
+  await readButton(page).click()
   await expect(page).toHaveURL(new RegExp(href! + '$'))
   await page.goBack()
   await expect(page.locator('article')).toHaveCount(0)
@@ -41,8 +42,8 @@ test('feed, saved and hidden posts open permalinks with browser history', async 
   await page.getByRole('button', { name: 'Open saved articles' }).click()
   await page.getByRole('button', { name: `Read ${title}`, exact: true }).click()
   await expect(page).toHaveURL(new RegExp(href! + '$'))
-  await page.getByRole('button', { name: 'Hide this article on this device' }).click()
-  await page.getByRole('button', { name: 'Open articles hidden on this device' }).click()
+  await page.getByRole('button', { name: 'Bin this article' }).click()
+  await openMenuItem(page, 'Open binned articles')
   await page.getByRole('button', { name: `Read ${title}`, exact: true }).click()
   await expect(page).toHaveURL(new RegExp(href! + '$'))
 })
@@ -53,17 +54,17 @@ test('share copies the specific permalink without moving the card; failures expo
     Object.defineProperty(navigator, 'clipboard', { value: { writeText: async (url: string) => { (window as any).copiedURL = url } }, configurable: true })
   })
   await page.goto('/')
-  const heading = page.getByRole('heading', { level: 2 }).first()
+  const heading = currentTitle(page)
   const title = await heading.textContent()
   const href = await heading.locator('a').getAttribute('href')
-  const cardShare = page.getByRole('button', { name: 'Share this article' })
+  const cardShare = current(page).getByRole('button', { name: 'Share this article' })
   await cardShare.click()
   await expect(cardShare.locator('..').getByRole('status')).toContainText('Link copied')
   expect(await page.evaluate(() => (window as any).copiedURL)).toBe(new URL(href!, page.url()).href)
   await expect(heading).toHaveText(title!)
-  await page.getByRole('button', { name: 'Read Article', exact: true }).click()
+  await readButton(page).click()
   await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', { value: { writeText: async () => { throw new Error('denied') } }, configurable: true }))
-  await page.getByRole('button', { name: 'Share this article' }).last().click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Share this article' }).click()
   await expect(page.getByRole('textbox', { name: 'Article link' })).toHaveValue(new URL(href!, page.url()).href)
 })
 

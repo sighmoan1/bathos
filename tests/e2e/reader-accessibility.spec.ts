@@ -1,6 +1,8 @@
 import { test, expect, type Page } from '@playwright/test'
 import fs from 'node:fs'
 import path from 'node:path'
+import matter from 'gray-matter'
+import { current, currentTitle, openMenuItem, press, readButton } from './feed-helpers'
 
 async function expectModal(page: Page, name: string) {
   const dialog = page.getByRole('dialog', { name, exact: true })
@@ -16,8 +18,8 @@ async function expectModal(page: Page, name: string) {
 
 test('reader announces its title, contains focus and restores the opener', async ({ page }) => {
   await page.goto('/')
-  const title = await page.locator('.reader-title').innerText()
-  const opener = page.getByRole('button', { name: 'Read Article', exact: true })
+  const title = await currentTitle(page).innerText()
+  const opener = readButton(page)
   await opener.focus()
   await page.keyboard.press('Enter')
   const dialog = await expectModal(page, title)
@@ -29,16 +31,19 @@ test('reader announces its title, contains focus and restores the opener', async
   await opener.click()
   await page.getByRole('dialog').getByRole('button', { name: 'Save for later', exact: true }).click()
   await expect(page.getByRole('dialog')).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Open saved articles' })).toBeFocused()
+  // Saving moves on to the next post; focus follows to its reading action.
+  await expect(currentTitle(page)).not.toHaveText(title)
+  await expect(readButton(page)).toBeFocused()
 })
 
 test('saved selection works by keyboard and replacement dialog owns focus', async ({ page }) => {
   await page.goto('/')
-  const title = await page.locator('.reader-title').innerText()
-  await page.getByRole('button', { name: 'Save', exact: true }).focus()
+  const title = await currentTitle(page).innerText()
+  await current(page).getByRole('button', { name: 'Save', exact: true }).focus()
   await page.keyboard.press('Enter')
   // The window feed handler must not replace the focused button's native action.
   await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(current(page).getByRole('button', { name: 'Save', exact: true })).toHaveAttribute('aria-pressed', 'true')
   const saved = page.getByRole('button', { name: 'Open saved articles', exact: true })
   await saved.click()
   const list = await expectModal(page, 'Saved Articles')
@@ -57,74 +62,78 @@ test('saved selection works by keyboard and replacement dialog owns focus', asyn
 
 test('direct post entry and browser back recover safe focus', async ({ page }) => {
   await page.goto('/')
-  const path = await page.locator('.reader-title a').getAttribute('href')
+  const path = await currentTitle(page).locator('a').getAttribute('href')
   await page.goto(path!)
   const title = await page.locator('article h1').innerText()
   await expectModal(page, title)
   await page.keyboard.press('Escape')
   await expect(page.getByRole('button', { name: 'Open saved articles' })).toBeFocused()
-  await page.getByRole('button', { name: 'Read Article', exact: true }).click()
+  await readButton(page).click()
   await expect(page.getByRole('dialog')).toHaveCount(1)
   await page.goBack()
   await expect(page.getByRole('dialog')).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Read Article', exact: true })).toBeFocused()
+  await expect(readButton(page)).toBeFocused()
 })
 
-test('hidden panel actions are named and reduced motion retains navigation', async ({ page }) => {
+test('bin panel actions are named and reduced motion retains navigation', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.goto('/')
-  const title = await page.locator('.reader-title').innerText()
-  await page.getByRole('button', { name: 'Skip', exact: true }).click()
-  await page.getByRole('button', { name: 'Open articles hidden on this device' }).click()
-  const list = await expectModal(page, 'Hidden on this device')
+  const title = await currentTitle(page).innerText()
+  await current(page).getByRole('button', { name: 'Bin', exact: true }).click()
+  await expect(currentTitle(page)).not.toHaveText(title)
+  await openMenuItem(page, 'Open binned articles')
+  const list = await expectModal(page, 'Binned articles')
   expect(await list.evaluate(element => getComputedStyle(element).transform)).toBe('none')
   await list.getByRole('button', { name: `Restore to feed: ${title}`, exact: true }).press('Enter')
-  await expect(list.getByText('No hidden articles', { exact: true })).toBeVisible()
+  await expect(list.getByText('Nothing in the bin', { exact: true })).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(page.getByRole('dialog')).toHaveCount(0)
-  const before = await page.locator('.reader-title').innerText()
-  await page.getByRole('button', { name: 'Next', exact: true }).press('Enter')
-  await expect(page.locator('.reader-title')).not.toHaveText(before)
-  expect(await page.locator('.reader-card').evaluate(element => getComputedStyle(element).transform)).toBe('none')
+  const before = await currentTitle(page).innerText()
+  await press(page, 'ArrowDown')
+  await expect(currentTitle(page)).not.toHaveText(before)
+  expect(await current(page).locator('.feed-card').evaluate(element => getComputedStyle(element).transform)).toBe('none')
 })
 
-test('pointer swipes keep next, previous, save and hide behavior', async ({ page }) => {
+test('sideways drags bin and bookmark; scrolling moves between posts', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' })
   await page.goto('/')
-  const heading = page.locator('.reader-title')
-  const first = await heading.innerText()
-  const swipe = async (dx: number, dy: number) => {
-    const beforeSwipe = await heading.innerText()
-    const box = await page.locator('.reader-card-surface').boundingBox()
+  const first = await currentTitle(page).innerText()
+  const drag = async (dx: number) => {
+    const box = await current(page).locator('.feed-card-body').boundingBox()
     const x = box!.x + box!.width / 2
-    const y = box!.y + box!.height / 2
+    const y = box!.y + Math.min(box!.height / 2, 200)
     await page.mouse.move(x, y)
     await page.mouse.down()
-    await page.mouse.move(x + dx, y + dy, { steps: 12 })
+    await page.mouse.move(x + dx, y, { steps: 12 })
     await page.mouse.up()
-    await expect(heading.last()).not.toHaveText(beforeSwipe)
-    await expect(page.locator(".reader-card")).toHaveCount(1)
   }
-  await swipe(0, -120)
-  await expect(heading).not.toHaveText(first)
-  await swipe(0, 120)
-  await expect(heading).toHaveText(first)
-  await swipe(130, 0)
-  await expect(heading).not.toHaveText(first)
+  // Scroll the feed itself, as a finger or wheel would.
+  await page.locator('.feed-scroller').evaluate(element => element.scrollBy({ top: element.clientHeight }))
+  await expect(currentTitle(page)).not.toHaveText(first)
+  await page.locator('.feed-scroller').evaluate(element => element.scrollTo({ top: 0 }))
+  await expect(currentTitle(page)).toHaveText(first)
+
+  await drag(160)
+  await expect(currentTitle(page)).not.toHaveText(first)
   await page.getByRole('button', { name: 'Open saved articles' }).click()
   await expect(page.getByRole('dialog').getByRole('button', { name: `Read ${first}`, exact: true })).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(page.getByRole('dialog')).toHaveCount(0)
-  const hidden = await heading.innerText()
-  await swipe(-130, 0)
-  await expect(heading).not.toHaveText(hidden)
-  await page.getByRole('button', { name: 'Open articles hidden on this device' }).click()
-  await expect(page.getByRole('dialog').getByRole('button', { name: `Read ${hidden}`, exact: true })).toBeVisible()
+
+  const binned = await currentTitle(page).innerText()
+  await drag(-160)
+  await expect(currentTitle(page)).not.toHaveText(binned)
+  await expect(page.locator(`.feed-slide[aria-label$=": ${binned}"]`)).toHaveCount(0)
+  await openMenuItem(page, 'Open binned articles')
+  await expect(page.getByRole('dialog').getByRole('button', { name: `Read ${binned}`, exact: true })).toBeVisible()
 })
 
-
-test('every article keeps its full reading action visible with phone filters expanded', async ({ browser }) => {
-  const slugs = fs.readdirSync(path.join(process.cwd(), 'content')).filter(name => name.endsWith('.md')).map(name => name.slice(0, -3)).sort()
+test('every article keeps its reading action and rail visible on phones, filtered or not', async ({ browser }) => {
+  const articles = fs.readdirSync(path.join(process.cwd(), 'content')).filter(name => name.endsWith('.md')).sort().map(name => ({
+    slug: name.slice(0, -3),
+    tags: (matter(fs.readFileSync(path.join(process.cwd(), 'content', name), 'utf8')).data.tags ?? []) as string[],
+  }))
+  const slugs = articles.map(article => article.slug)
   const cases = [
     { viewport: { width: 390, height: 844 }, screen: { width: 390, height: 844 } },
     { viewport: { width: 980, height: 2120 }, screen: { width: 390, height: 844 } },
@@ -134,23 +143,28 @@ test('every article keeps its full reading action visible with phone filters exp
   for (const { viewport, screen } of cases) {
     const context = await browser.newContext({ viewport, screen, isMobile: true, hasTouch: true, reducedMotion: 'reduce' })
     const page = await context.newPage()
+    await page.addInitScript(() => localStorage.setItem('swipe-reader-hint-seen', '1'))
     await page.goto('/')
-    await expect(page.getByRole('button', { name: 'Read Article', exact: true })).toBeVisible()
-    for (const slug of slugs) {
-      await page.evaluate(({ slugs, slug }) => {
-        localStorage.setItem('swipe-reader-dismissed', JSON.stringify(slugs.filter(other => other !== slug)))
-        localStorage.setItem('swipe-reader-tags', '[]')
-      }, { slugs, slug })
-      await page.reload()
-      await expect(page.locator('.reader-title a')).toHaveAttribute('href', `/posts/${encodeURIComponent(slug)}/`)
-      await page.getByRole('button', { name: 'Filter by tag' }).click()
-      await expect(page.locator('.reader-tag-filter')).toBeVisible()
-      const action = page.getByRole('button', { name: 'Read Article', exact: true })
-      await expect(action, `${slug} at ${viewport.width}x${viewport.height}`).toBeInViewport({ ratio: 1 })
-      const bounds = await action.boundingBox()
-      const surface = await page.locator('.reader-card-surface').boundingBox()
-      expect(bounds!.y, `${slug}: action top within card`).toBeGreaterThanOrEqual(surface!.y)
-      expect(bounds!.y + bounds!.height, `${slug}: action bottom within card`).toBeLessThanOrEqual(surface!.y + surface!.height + 1)
+    await expect(readButton(page)).toBeVisible()
+    for (const { slug, tags } of articles) {
+      for (const filter of [[], tags.slice(0, 1)]) {
+        await page.evaluate(({ slugs, slug, filter }) => {
+          localStorage.setItem('swipe-reader-dismissed', JSON.stringify(slugs.filter(other => other !== slug)))
+          localStorage.setItem('swipe-reader-tags', JSON.stringify(filter))
+        }, { slugs, slug, filter })
+        await page.reload()
+        await expect(currentTitle(page).locator('a')).toHaveAttribute('href', `/posts/${encodeURIComponent(slug)}/`)
+        const label = `${slug} at ${viewport.width}x${viewport.height} filter=${filter.join()}`
+        await expect(readButton(page), label).toBeInViewport({ ratio: 1 })
+        await expect(currentTitle(page), label).toBeInViewport()
+        for (const name of ['Save', 'Bin']) await expect(current(page).getByRole('button', { name, exact: true }), label).toBeInViewport({ ratio: 1 })
+        const read = await readButton(page).boundingBox()
+        const rail = await current(page).locator('.feed-rail').boundingBox()
+        expect(read!.x + read!.width, `${label}: rail does not cover the action`).toBeLessThanOrEqual(rail!.x + 1)
+        const title = await currentTitle(page).boundingBox()
+        const header = await page.locator('.feed-topbar-row').boundingBox()
+        expect(title!.y, `${label}: header does not cover the title`).toBeGreaterThanOrEqual(header!.y + header!.height)
+      }
     }
     await context.close()
   }

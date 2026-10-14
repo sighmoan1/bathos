@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowLeft, Bookmark, X } from "lucide-react"
+import { ArrowLeft, Bookmark, Trash2 } from "lucide-react"
 import type { Article } from "@/lib/articles"
 import { ArticleMarkdownContent } from "./article-markdown"
 import { motion, useReducedMotion } from "framer-motion"
@@ -57,10 +57,10 @@ export function ArticleReader({ article, onClose, onSave, onDismiss, onTagClick,
             <button
               onClick={onDismiss}
               className="p-2 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
-              title="Never show again"
-              aria-label="Hide this article on this device"
+              title="Bin this article"
+              aria-label="Bin this article"
             >
-              <X className="w-5 h-5" />
+              <Trash2 className="w-5 h-5" />
             </button>
             <button
               onClick={onSave}

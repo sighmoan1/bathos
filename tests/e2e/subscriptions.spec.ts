@@ -25,6 +25,8 @@ test('subscription navigation and RSS address work at narrow phone sizes',async(
  for(const width of [320,390]){
   await page.setViewportSize({width,height:812})
   await page.goto('/')
+  // Narrow screens keep site links in the header menu.
+  await page.getByRole('button',{name:'More options'}).click()
   await page.getByRole('link',{name:'Subscribe to Bathos',exact:true}).click()
   await expect(page).toHaveURL(/\/subscribe\/$/)
   await expect(page.getByRole('heading',{name:'By RSS',exact:true})).toBeVisible()
@@ -33,6 +35,6 @@ test('subscription navigation and RSS address work at narrow phone sizes',async(
   expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBe(width)
   await expect(page.getByRole('link',{name:/Blogtrottr/})).toHaveCount(0)
   await page.getByRole('link',{name:'Back to Bathos'}).click()
-  await expect(page.getByRole('link',{name:'Subscribe to Bathos'})).toBeVisible()
+  await expect(page.getByRole('button',{name:'More options'})).toBeVisible()
  }
 })
