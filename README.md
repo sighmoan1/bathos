@@ -14,6 +14,10 @@ in that browser.
 
 ## Cloudflare Pages
 
+Cloudflare Pages and Workers are the hosting platform. The experimental
+DigitalOcean migration (PR #21) was abandoned on 14 October 2026 and never
+merged. See [operating status and remaining activation work](docs/operations-status.md).
+
 This app exports a static site. Recipes are read from `content/*.md` at build
 time; reading, swiping, filtering, saved articles, and trash run in the browser.
 Saved articles and preferences are specific to the browser and domain.
