@@ -4,7 +4,7 @@ import matter from 'gray-matter'
 import { renderToStaticMarkup } from 'react-dom/server'
 import React from 'react'
 import ReactMarkdown from 'react-markdown'
-import { articleMarkdownComponents } from '../../components/article-markdown'
+import { articleMarkdownComponents, remarkPipeTables } from '../../components/article-markdown'
 
 const articles = fs.readdirSync('content').filter(name => name.endsWith('.md')).map(name => {
   const { data, content } = matter(fs.readFileSync(`content/${name}`, 'utf8'))
@@ -30,16 +30,23 @@ for (const javaScriptEnabled of [false, true]) {
         await expect(page.locator('link[rel=canonical]')).toHaveAttribute('href', `https://bathos.org/posts/${encodeURIComponent(article.slug)}/`)
         // Compare the entire rendered Markdown, including the end of long articles,
         // with the current content source so new publishing is covered after rebuild.
-        const expectedHTML = renderToStaticMarkup(React.createElement(ReactMarkdown, { children: article.content, components: articleMarkdownComponents }))
-        const normalizedHTML = await page.evaluate((html) => {
+        const expectedHTML = renderToStaticMarkup(React.createElement(ReactMarkdown, { children: article.content, components: articleMarkdownComponents, remarkPlugins: [remarkPipeTables as never] }))
+        const [normalizedHTML, actualHTML] = await page.evaluate(([html, currentHTML]: [string, string]) => {
+          const normalize = (input: string) => {
           const template = document.createElement('template')
-          template.innerHTML = html.replace(/<!--[\s\S]*?-->/g, '')
+          template.innerHTML = input.replace(/<!--[\s\S]*?-->/g, '')
           // React 19 emits image preloads beside static markup; Next hoists them
           // into the document head. Compare the complete article body itself.
           template.content.querySelectorAll('link[rel="preload"][as="image"]').forEach(link => link.remove())
+          template.content.querySelectorAll('*').forEach(element => {
+            const attributes = Array.from(element.attributes).map(attribute => [attribute.name, attribute.value] as const).sort(([a], [b]) => a.localeCompare(b))
+            for (const attribute of Array.from(element.attributes)) element.removeAttribute(attribute.name)
+            for (const [name, value] of attributes) element.setAttribute(name, value)
+          })
           return template.innerHTML
-        }, expectedHTML)
-        const actualHTML = await page.locator('.article-prose').evaluate(element => element.innerHTML.replace(/<!--[\s\S]*?-->/g, ''))
+          }
+          return [normalize(html), normalize(currentHTML)]
+        }, [expectedHTML, await page.locator('.article-prose').innerHTML()])
         expect(actualHTML).toBe(normalizedHTML)
         if (article.slug === 'out-of-the-rabbit-hole') {
           await expect(page.locator('.article-prose table')).toHaveCount(1)

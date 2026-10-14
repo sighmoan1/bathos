@@ -1,8 +1,11 @@
+Total output lines: 361
+
+/Users/apple/.rvm/scripts/rvm:29: operation not permitted: ps
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import ReactMarkdown from "react-markdown"
-import { articleMarkdownComponents, ArticleMarkdownAnchor } from "@/components/article-markdown"
+import { articleMarkdownComponents, ArticleMarkdownAnchor, remarkPipeTables } from "@/components/article-markdown"
 import { ArrowLeft, Check, Download, Feather, Plus, Search, Trash2, WifiOff } from "lucide-react"
 import "./manage.css"
 
@@ -15,6 +18,10 @@ type Submission = { operationId: string; method: "POST" | "PUT" | "DELETE"; post
 type Publishing = { sha: string; text: string; publication?: Publication; pending?: boolean; slug?: string; previousSha?: string }
 type InstallPrompt = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> }
 class ApiError extends Error { constructor(message: string, public status: number, public code?: string) { super(message) } }
+const managePreviewComponents = {
+  ...articleMarkdownComponents,
+  a: (props: Parameters<typeof ArticleMarkdownAnchor>[0]) => <ArticleMarkdownAnchor {...props} target="_blank" rel="noopener noreferrer" />,
+}
 async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 15000)
@@ -155,171 +162,7 @@ export default function ManagePosts() {
       const current = stateRef.current
       if (!current.post) return
       if (current.busy || (current.dirty && !window.confirm("Leave the editor? Your writing will stay as a draft on this device."))) { history.pushState({ editor: true }, ""); return }
-      if (current.dirty && !keepDraft(current.post, current.draftSlug)) { history.pushState({ editor: true }, ""); return }
-      setPost(null); setRecovery(null); setError("")
-    }
-    window.addEventListener("beforeunload", beforeUnload); window.addEventListener("popstate", back)
-    return () => { window.removeEventListener("beforeunload", beforeUnload); window.removeEventListener("popstate", back) }
-  }, [keepDraft])
-
-  useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem("bathos:pending-publication") || "null")
-      if (saved?.publication && Number.isSafeInteger(saved.publication.number) && saved.publication.number > 0 && /^[a-f0-9]{40}$/.test(saved.sha)) setDeployment({ ...saved, publication: { ...saved.publication, url: `https://github.com/sighmoan1/bathos/pull/${saved.publication.number}` } })
-      const request = JSON.parse(localStorage.getItem("bathos:pending-submission") || "null")
-      if (request && /^[a-f0-9-]{36}$/.test(request.operationId) && ["POST", "PUT", "DELETE"].includes(request.method) && typeof request.login === "string" && typeof request.draftSlug === "string" && validDraft({ post: request.post, savedAt: "saved" }) && /^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$/.test(request.post.slug)) setSubmission(request)
-    } catch { /* Publishing status can also be checked in GitHub. */ }
-  }, [])
-
-  useEffect(() => {
-    if (session === "in" && submission && !busy) void completeSubmission(submission)
-  }, [session, submission?.operationId])
-
-  useEffect(() => {
-    try {
-      if (deployment?.publication && deployment.pending) localStorage.setItem("bathos:pending-publication", JSON.stringify(deployment))
-      else if (deployment?.publication) localStorage.removeItem("bathos:pending-publication")
-    } catch { /* The saved pull request remains available in GitHub. */ }
-  }, [deployment])
-
-  useEffect(() => {
-    if (!deployment) return
-    let cancelled = false
-    let timer: ReturnType<typeof setTimeout>
-    const sha = deployment.sha
-    const poll = async (attempt: number) => {
-      try {
-        const result = await api<{ state: string; message?: string; merged?: boolean; closed?: boolean }>(deployment.publication ? `/api/publication/${deployment.publication.number}` : `/api/deployment/${encodeURIComponent(sha)}`, deployment.publication ? { method: "POST", headers: { "X-Bathos-Publication": deployment.publication.receipt } } : {})
-        if (cancelled) return
-        if (result.merged) { setDeployment(current => current ? { ...current, pending: false } : current); void loadPosts() }
-        if (["success", "published", "deployed"].includes(result.state)) { setDeployment({ ...deployment, pending: false, text: "Published. Your changes are live on Bathos." }); return }
-        if (["failure", "failed", "error", "cancelled", "canceled"].includes(result.state)) {
-          if (result.closed && deployment.slug) {
-            setPost(current => current && current.slug === deployment.slug ? { ...current, sha: deployment.previousSha } : current)
-            setOriginal("")
-            try {
-              const key = draftKey(deployment.slug), draft = JSON.parse(localStorage.getItem(key) || "null")
-              if (validDraft(draft)) { draft.post.sha = deployment.previousSha; localStorage.setItem(key, JSON.stringify(draft)); loadDrafts() }
-            } catch { /* Original writing remains in the device draft. */ }
-          }
-          setDeployment({ ...deployment, pending: !!deployment.publication && !result.merged && !result.closed, text: result.message || "Saved to GitHub, but publishing failed. Your changes are safe; check the deployment before retrying." }); return
-        }
-        const message = result.message
-        if (message) setDeployment(current => current ? { ...current, text: message } : current)
-      } catch { if (cancelled) return }
-      if (attempt >= 100) { setDeployment(current => current ? { ...current, text: "Your changes are saved. Publishing is taking longer than expected; reload to check again, or view publishing progress." } : current); return }
-      timer = setTimeout(() => void poll(attempt + 1), 6000)
-    }
-    void poll(0)
-    return () => { cancelled = true; clearTimeout(timer) }
-  }, [deployment?.sha, deployment?.publication?.number, loadPosts, loadDrafts])
-
-  function enter(value: Post) {
-    setPost(value); setOriginal(JSON.stringify(value)); setDraftSlug(value.sha ? value.slug : ""); setPreview(false); setConflict(false); setError(""); setNotice(""); setDraftSaved(false); setRecovery(null)
-    history.pushState({ editor: true }, "")
-    try {
-      const stored = localStorage.getItem(draftKey(value.sha ? value.slug : ""))
-      if (stored) {
-        const draft = JSON.parse(stored)
-        if (validDraft(draft)) setRecovery(draft)
-      }
-    } catch { setStorageError("Draft recovery is unavailable on this device.") }
-    window.scrollTo(0, 0)
-  }
-  function continueDraft(draft: DeviceDraft) {
-    const value = draft.post
-    setPost(value); setOriginal(""); setDraftSlug(draft.key.slice("bathos:post-draft:".length) === "new" ? "" : draft.key.slice("bathos:post-draft:".length)); setPreview(false); setConflict(false); setError(""); setNotice("Device draft recovered. Saving checks for changes to the current post."); setDraftSaved(true); setRecovery(null)
-    history.pushState({ editor: true }, ""); window.scrollTo(0, 0)
-  }
-  function discardDraft(draft: DeviceDraft) {
-    if (!window.confirm(`Discard the device draft “${draft.post.title || "Untitled post"}”? Your published post will not change.`)) return
-    try { localStorage.removeItem(draft.key); loadDrafts() }
-    catch { setStorageError("Could not remove the draft from this device.") }
-  }
-  async function openPost(slug: string) {
-    setBusy(true); setError("")
-    try { enter(await api<Post>(`/api/posts/${encodeURIComponent(slug)}`)) }
-    catch (e) { handleError(e) }
-    finally { setBusy(false) }
-  }
-  function handleError(e: unknown) {
-    if (e instanceof ApiError && e.status === 401) setSession("out")
-    if (e instanceof ApiError && e.status === 409 && e.code !== "publication_conflict") setConflict(true)
-    setError(e instanceof Error ? e.message : "Something went wrong. Please try again.")
-  }
-  function change(field: keyof Post, value: string | string[]) {
-    if (!post) return
-    setPost({ ...post, [field]: value }); setNotice("")
-  }
-  function replyTargets(targets?: string[]) {
-    return [...new Set((targets || []).map(target => target.trim()).filter(Boolean).map(target => {
-      let url: URL
-      try { url = new URL(target) } catch { throw new Error("Add a full HTTP or HTTPS address for each reply, one per line.") }
-      if (!/^https?:\/\//i.test(target) || !["http:", "https:"].includes(url.protocol) || url.username || url.password || /[\u0000-\u0020\u007f]/.test(target)) throw new Error("Reply addresses must use HTTP or HTTPS, without credentials or whitespace.")
-      return url.href
-    }))]
-  }
-  async function save() {
-    if (!post || busy || publishing || !online || session !== "in" || conflict) return
-    const value = { ...post, slug: post.slug || slugify(post.title), tags: [...new Set(post.tags.map(tag => tag.trim()).filter(Boolean))] }
-    if (!value.title.trim() || !value.body.trim() || !(value.sha ? /^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$/ : /^[a-z0-9]+(?:-[a-z0-9]+)*$/).test(value.slug) || !value.date) { setError("Add a title, a date, some writing, and a URL name using letters, numbers and hyphens."); return }
-    try { if (value.inReplyTo !== undefined) value.inReplyTo = replyTargets(value.inReplyTo) }
-    catch (e) { setError(e instanceof Error ? e.message : "Check your reply addresses."); return }
-    setPost(value); keepDraft(value, draftSlug)
-    await beginSubmission({ operationId: crypto.randomUUID(), method: value.sha ? "PUT" : "POST", post: value, draftSlug, login })
-  }
-  async function remove() {
-    if (!post?.sha || busy || publishing || !online || !window.confirm(`Delete “${post.title}” from Bathos? This removes the post when the site publishes.${dirty ? " Unsaved writing in this editor will also be removed." : ""}`)) return
-    await beginSubmission({ operationId: crypto.randomUUID(), method: "DELETE", post, draftSlug, login })
-  }
-  async function beginSubmission(request: Submission) {
-    try { localStorage.setItem("bathos:pending-submission", JSON.stringify(request)) }
-    catch { setError("Your browser could not keep the publishing request. Keep your draft open and free storage before trying again."); return }
-    setSubmission(request); setBusy(true)
-    await completeSubmission(request)
-  }
-  async function completeSubmission(request: Submission) {
-    if (request.login !== login) { setError("Sign in with the account that started this publishing request to resume it."); return }
-    setBusy(true); setError("")
-    try {
-      const deletion = request.method === "DELETE"
-      const body = deletion ? { sha: request.post.sha, operationId: request.operationId } : { ...request.post, operationId: request.operationId }
-      const path = request.method === "POST" ? "/api/posts" : `/api/posts/${encodeURIComponent(request.post.slug)}`
-      const result = await api<{ post: Post; commitSha: string; publication?: Publication }>(path, { method: request.method, body: JSON.stringify(body) })
-      if (deletion) {
-        try { localStorage.removeItem(draftKey(request.draftSlug)); loadDrafts() } catch { /* The local draft is also retained. */ }
-        setPost(null); setOriginal(""); setRecovery(null); history.replaceState({}, "")
-      } else {
-        setPost(result.post); setOriginal(JSON.stringify(result.post)); setDraftSlug(result.post.slug); setDraftSaved(false); setRecovery(null)
-        if (result.publication) {
-          if (keepDraft(result.post, result.post.slug) && request.draftSlug !== result.post.slug) try { localStorage.removeItem(draftKey(request.draftSlug)); loadDrafts() } catch { /* The original device draft is also retained. */ }
-        } else try { localStorage.removeItem(draftKey(request.draftSlug)); loadDrafts() } catch { /* The original device draft is also retained. */ }
-      }
-      const progress: Publishing = { sha: result.commitSha, publication: result.publication, slug: request.post.slug, previousSha: request.post.sha, pending: !!result.publication, text: result.publication ? "Your changes are saved. Checking them before publishing automatically…" : "Saved to GitHub. Publishing to Bathos…" }
-      if (result.publication) localStorage.setItem("bathos:pending-publication", JSON.stringify(progress))
-      setNotice("Saved to GitHub."); setDeployment(progress)
-      localStorage.removeItem("bathos:pending-submission"); setSubmission(null); void loadPosts()
-    } catch (e) {
-      handleError(e)
-      if (e instanceof ApiError && (e.status === 400 || (e.status === 409 && e.code === "conflict"))) { localStorage.removeItem("bathos:pending-submission"); setSubmission(null) }
-    }
-    finally { setBusy(false) }
-  }
-  async function reloadConflict() {
-    if (!post || !keepDraft(post, draftSlug)) return
-    setBusy(true)
-    try {
-      const current = await api<Post>(`/api/posts/${encodeURIComponent(post.slug)}`)
-      setRecovery({ post, savedAt: new Date().toISOString() }); setPost(current); setOriginal(JSON.stringify(current)); setConflict(false); setError(""); setNotice("Loaded the current post. Your earlier writing is kept as a device draft.")
-    } catch (e) { handleError(e) } finally { setBusy(false) }
-  }
-  const visiblePosts = posts.filter(p => `${p.slug} ${p.title} ${p.description} ${p.tags?.join(" ")}`.toLowerCase().includes(query.toLowerCase()))
-
-  return <main className={`post-manager${post ? " pm-is-editing" : ""}`}>
-    <header className="pm-header"><a href="/" onClick={e => { if (busy || (dirty && !window.confirm("Leave the editor? Your writing will stay as a draft on this device."))) e.preventDefault(); else if (post && dirty && !keepDraft(post, draftSlug)) e.preventDefault() }}><ArrowLeft size={18} /> Bathos</a><button className="pm-quiet" onClick={() => setInstallHelp(!installHelp)}><Download size={17} /> Install</button></header>
-    <div className="pm-shell">
-      <div className="pm-masthead"><span className="pm-eyebrow"><Feather size={16} /> YOUR WRITING ROOM</span><h1>{post ? post.sha ? "Edit your post" : "A new thought" : "Manage posts"}</h1><p>{post ? "A little space to put your words in order." : "Write, polish and publish, wherever you are."}</p></div>
-      {installHelp && <section className="pm-panel"><h2>Keep Bathos on your home screen</h2>{installPrompt ? <button onClick={async () => { await installPrompt.prompt(); await installPrompt.userChoice; setInstallPrompt(null) }}>Install Bathos</button> : <p>On iPhone or iPad, open this page in Safari, tap Share, then Add to Home Screen. On Android, choose Install app or Add to Home screen in your browser menu.</p>}<p className="pm-small">Installed or in your browser, drafts stay on this device. Publishing needs a connection.</p></section>}
+      if (current.dirty && !keepDraft(current.post, cu…3146 tokens truncated…ck={async () => { await installPrompt.prompt(); await installPrompt.userChoice; setInstallPrompt(null) }}>Install Bathos</button> : <p>On iPhone or iPad, open this page in Safari, tap Share, then Add to Home Screen. On Android, choose Install app or Add to Home screen in your browser menu.</p>}<p className="pm-small">Installed or in your browser, drafts stay on this device. Publishing needs a connection.</p></section>}
       {updateWorker && <div className="pm-banner">An app update is ready. <button disabled={busy} onClick={() => { if (dirty && post && !keepDraft(post, draftSlug)) return; if (dirty && !window.confirm("Update the app? Your writing is kept as a device draft.")) return; navigator.serviceWorker.addEventListener("controllerchange", () => window.location.reload(), { once: true }); updateWorker.postMessage({ type: "SKIP_WAITING" }) }}>Update app</button></div>}
       {!online && <div className="pm-banner"><WifiOff size={17} /><span>You’re offline. You can write a device draft; reconnect to save to the site.</span></div>}
       {storageError && <div role="alert" className="pm-error">{storageError}</div>}
@@ -339,7 +182,7 @@ export default function ManagePosts() {
           <label>In reply to<textarea aria-label="In reply to" aria-describedby="reply-target-help" className="pm-description" value={(post.inReplyTo || []).join("\n")} placeholder="https://example.com/the-original-post/" onChange={e => change("inReplyTo", e.target.value.split("\n"))} /><span id="reply-target-help" className="pm-small">Add the original post’s full address, one per line. Leave empty for an ordinary post.</span></label>
           {!post.sha && <label>URL name<input value={post.slug} placeholder={slugify(post.title) || "my-new-post"} pattern="[a-z0-9]+(-[a-z0-9]+)*" maxLength={100} onChange={e => change("slug", e.target.value)} /><span className="pm-small">Leave blank to use the title.</span></label>}
           <div className="pm-writing-head"><label htmlFor="post-body">Your writing</label><div className="pm-tabs" role="group" aria-label="Editor view"><button type="button" aria-pressed={!preview} onClick={() => setPreview(false)}>Write</button><button type="button" aria-pressed={preview} onClick={() => setPreview(true)}>Preview</button></div></div>
-          {preview ? <article className="pm-preview"><h2>{post.title || "Untitled post"}</h2>{post.body ? <ReactMarkdown components={{ a: props => <a {...props} target="_blank" rel="noopener noreferrer" /> }}>{post.body}</ReactMarkdown> : <p>Your writing will appear here.</p>}</article> : <textarea id="post-body" className="pm-body" value={post.body} placeholder="Start writing…\n\nMarkdown works here." onChange={e => change("body", e.target.value)} />}
+          {preview ? <article className="pm-preview"><h2>{post.title || "Untitled post"}</h2>{post.body ? <ReactMarkdown remarkPlugins={[remarkPipeTables as never]} components={managePreviewComponents}>{post.body}</ReactMarkdown> : <p>Your writing will appear here.</p>}</article> : <textarea id="post-body" className="pm-body" value={post.body} placeholder="Start writing…\n\nMarkdown works here." onChange={e => change("body", e.target.value)} />}
         </fieldset>
         {notice && <p role="status" className="pm-small">{notice}</p>}
         <div className="pm-actions"><button className="pm-primary" onClick={save} disabled={busy || publishing || !online || session !== "in" || conflict || !!recovery}>{busy ? "Working…" : "Save to site"}</button><button onClick={() => keepDraft(post, draftSlug)} disabled={busy}>Save device draft</button>{post.sha && <button className="pm-delete" aria-label="Delete post" disabled={busy || publishing || !online || session !== "in" || conflict} onClick={remove}><Trash2 size={19} /><span>Delete</span></button>}</div>
