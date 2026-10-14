@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import ReactMarkdown from "react-markdown"
+import { articleMarkdownComponents, ArticleMarkdownAnchor } from "@/components/article-markdown"
 import { ArrowLeft, Check, Download, Feather, Plus, Search, Trash2, WifiOff } from "lucide-react"
 import "./manage.css"
 
