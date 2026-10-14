@@ -98,10 +98,11 @@ test('sideways drags bin and bookmark; scrolling moves between posts', async ({ 
   await page.emulateMedia({ reducedMotion: 'no-preference' })
   await page.goto('/')
   const first = await currentTitle(page).innerText()
+  // Start on the title link: swipes must work from anywhere on the card.
   const drag = async (dx: number) => {
-    const box = await current(page).locator('.feed-card-body').boundingBox()
-    const x = box!.x + box!.width / 2
-    const y = box!.y + Math.min(box!.height / 2, 200)
+    const box = await currentTitle(page).locator('a').boundingBox()
+    const x = box!.x + Math.min(box!.width / 2, 60)
+    const y = box!.y + box!.height / 2
     await page.mouse.move(x, y)
     await page.mouse.down()
     await page.mouse.move(x + dx, y, { steps: 12 })
