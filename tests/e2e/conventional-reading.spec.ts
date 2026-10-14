@@ -4,6 +4,7 @@ import matter from 'gray-matter'
 import { renderToStaticMarkup } from 'react-dom/server'
 import React from 'react'
 import ReactMarkdown from 'react-markdown'
+import { articleMarkdownComponents } from '../../components/article-markdown'
 
 const articles = fs.readdirSync('content').filter(name => name.endsWith('.md')).map(name => {
   const { data, content } = matter(fs.readFileSync(`content/${name}`, 'utf8'))
@@ -29,7 +30,7 @@ for (const javaScriptEnabled of [false, true]) {
         await expect(page.locator('link[rel=canonical]')).toHaveAttribute('href', `https://bathos.org/posts/${encodeURIComponent(article.slug)}/`)
         // Compare the entire rendered Markdown, including the end of long articles,
         // with the current content source so new publishing is covered after rebuild.
-        const expectedHTML = renderToStaticMarkup(React.createElement(ReactMarkdown, { children: article.content }))
+        const expectedHTML = renderToStaticMarkup(React.createElement(ReactMarkdown, { children: article.content, components: articleMarkdownComponents }))
         const normalizedHTML = await page.evaluate((html) => {
           const template = document.createElement('template')
           template.innerHTML = html
