@@ -39,7 +39,7 @@ for (const javaScriptEnabled of [false, true]) {
           // into the document head. Compare the complete article body itself.
           template.content.querySelectorAll('link[rel="preload"][as="image"]').forEach(link => link.remove())
           template.content.querySelectorAll('*').forEach(element => {
-            const attributes = Array.from(element.attributes).map(attribute => [attribute.name, attribute.value] as const).sort(([a], [b]) => a.localeCompare(b))
+            const attributes = Array.from(element.attributes).map(attribute => [attribute.name, attribute.name === 'style' ? (element as HTMLElement).style.cssText : attribute.value] as const).sort(([a], [b]) => a.localeCompare(b))
             for (const attribute of Array.from(element.attributes)) element.removeAttribute(attribute.name)
             for (const [name, value] of attributes) element.setAttribute(name, value)
           })
