@@ -52,7 +52,7 @@ pnpm verify:release
 pnpm verify:webmentions-enabled
 ```
 
-Record validation results in the PR, wait for both `Release checks` and `Cloudflare Pages` to succeed for its exact head commit, then merge to `main`. Wait for the Cloudflare production deployment of the exact merged commit and check the affected behavior on a fresh online page. Account for the reader's service-worker cache when checking an existing installation.
+Record validation results in the PR, wait for both `Release checks` and `Cloudflare Pages` to succeed for its exact head commit, then merge to `main`. Wait for the Cloudflare production deployment of the exact merged commit and check the affected behavior on a fresh online page. Verify that old reader registrations and caches are retired on existing installations.
 
 Design-system updates are manual: run `node scripts/update-design-system.mjs` with authenticated GitHub access, review the dependency changes, then follow the same validation, PR and deployment process. Major upgrades require deliberate review. The former scheduled Actions updater is disabled.
 
@@ -63,12 +63,10 @@ Install Bathos button for a browser install prompt or platform instructions.
 On iPhone/iPad, use Safari → Share → Add to Home Screen. On supported Android
 and desktop browsers, choose Install app from the browser menu.
 
-Visit online once before reading offline. The installed app opens the reader
-in a standalone window, and the exported articles and reader assets are cached
-together. Saved articles, hidden articles and filters remain on this device.
-Use **Update app** when offered to load a new release and its articles.
-The reader cache excludes sign-in, post management and API responses; the
-manager keeps its own offline shell and device drafts.
+The installed app opens the reader in a standalone window. Articles require an
+internet connection; refresh to load new releases. Saved articles, hidden
+articles and filters remain on this device. Existing reader caches are removed
+on upgrade; the manager keeps its separate offline shell and device drafts.
 
 Validation: `pnpm build`, `pnpm test:e2e`, `node --test tests/*.test.cjs`,
 `npm test --prefix workers/admin-oauth`, and the mobile manager browser check.
@@ -82,4 +80,4 @@ Open a title or Read Article to read it, then use Share on the card or article
 to open the device share sheet or copy its link. If clipboard access is blocked,
 a selectable link is shown. Direct links open even when the post is hidden or
 excluded by local filters. Keep filenames unchanged to preserve existing links.
-Post pages and their assets are included in the reader’s offline cache.
+Post pages require an internet connection.

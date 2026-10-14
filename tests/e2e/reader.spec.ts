@@ -36,7 +36,7 @@ test('each post fills the screen at desktop, mobile and short landscape sizes', 
   }
 })
 
-test('reader manifest, installation guidance and offline reading', async ({ page, context }) => {
+test('reader remains installable without an offline cache', async ({ page }) => {
   await page.goto('/')
   await expect(readButton(page)).toBeVisible()
   const manifestURL = await page.locator('link[rel=manifest]').getAttribute('href')
@@ -46,22 +46,19 @@ test('reader manifest, installation guidance and offline reading', async ({ page
   await openMenuItem(page, 'Install Bathos')
   await expect(page.getByRole('region', { name: 'Install Bathos instructions' })).toContainText('Add to Home Screen')
   await page.getByRole('button', { name: 'Close installation instructions' }).click()
-  await page.evaluate(() => navigator.serviceWorker.ready)
-  await page.waitForFunction(() => navigator.serviceWorker.controller !== null)
-  const caches = await page.evaluate(async () => (await Promise.all((await window.caches.keys()).map(async key => (await (await window.caches.open(key)).keys()).map(request => new URL(request.url).pathname)))).flat())
-  expect(caches).toContain('/')
-  expect(caches.some(url => /^\/(api|manage|admin)(\/|$)/.test(url))).toBe(false)
-  await current(page).getByRole('button', { name: 'Save', exact: true }).click()
-  await context.setOffline(true)
+  expect(await page.evaluate(() => navigator.serviceWorker.getRegistrations().then(items => items.filter(item => item.scope === new URL('/', location.origin).href).length))).toBe(0)
+  await page.evaluate(async () => {
+    await caches.open('bathos-reader-legacy')
+    await caches.open('bathos-manager-preserved')
+  })
   await page.reload()
-  await expect(readButton(page)).toBeVisible()
+  await page.waitForFunction(async () => !(await caches.keys()).includes('bathos-reader-legacy'))
+  expect(await page.evaluate(() => caches.keys())).toEqual(['bathos-manager-preserved'])
+  await expect(page.getByRole('button', { name: 'Update app', exact: true })).toHaveCount(0)
+  await current(page).getByRole('button', { name: 'Save', exact: true }).click()
+  await page.reload()
   await page.getByRole('button', { name: 'Open saved articles' }).click()
   await expect(page.getByRole('heading', { name: 'Saved Articles' })).toBeVisible()
-  await page.getByRole('button', { name: 'Back', exact: true }).click()
-  await readButton(page).click()
-  await expect(page.locator('article h1')).toBeVisible()
-  await expect(page.locator('article')).not.toBeEmpty()
-  await context.setOffline(false)
 })
 
 test('browser install prompt is offered once and hidden after installation', async ({ page }) => {
@@ -81,10 +78,8 @@ test('browser install prompt is offered once and hidden after installation', asy
   await expect(page.getByRole('button', { name: 'Install Bathos', exact: true })).toHaveCount(0)
 })
 
-test('reader and manager retain separate offline shells', async ({ page, context }) => {
+test('manager retains its offline shell without a reader cache', async ({ page, context }) => {
   await page.goto('/')
-  await page.evaluate(() => navigator.serviceWorker.ready)
-  await page.waitForFunction(() => navigator.serviceWorker.controller !== null)
   await page.goto('/manage/')
   await expect(page.getByRole('heading', { name: /Manage posts/i })).toBeVisible()
   await page.waitForFunction(async () => {
@@ -94,13 +89,11 @@ test('reader and manager retain separate offline shells', async ({ page, context
   await page.reload()
   await page.waitForFunction(() => navigator.serviceWorker.controller?.scriptURL.endsWith('/manage/sw.js'))
   const keys = await page.evaluate(() => caches.keys())
-  expect(keys.some(key => key.startsWith('bathos-reader-'))).toBe(true)
+  expect(keys.some(key => key.startsWith('bathos-reader-'))).toBe(false)
   expect(keys.some(key => key.startsWith('bathos-manager-'))).toBe(true)
   await context.setOffline(true)
   await page.reload()
   await expect(page.getByRole('heading', { name: /Manage posts/i })).toBeVisible()
-  await page.goto('/')
-  await expect(readButton(page)).toBeVisible()
   await context.setOffline(false)
 })
 
