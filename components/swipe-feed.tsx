@@ -187,11 +187,14 @@ export function SwipeFeed({ initialArticles, allTags, initialReadingArticle }: S
   // end of the feed wraps back to the first article.
   const step = useCallback(
     (delta: number) => {
-      const from = targetRef.current ?? currentIndex
+      const scroller = feedRef.current
+      if (!scroller) return
+      // Read the scroller rather than React state, which lags a frame behind.
+      const from = targetRef.current ?? Math.round(scroller.scrollTop / (scroller.clientHeight || 1))
       if (delta > 0 && from >= slideCountRef.current - 1) goTo(0)
       else goTo(from + delta)
     },
-    [currentIndex, goTo],
+    [goTo],
   )
 
   const handleNext = useCallback(() => step(1), [step])
@@ -216,8 +219,17 @@ export function SwipeFeed({ initialArticles, allTags, initialReadingArticle }: S
       const key = (event.target as HTMLElement).closest<HTMLElement>("[data-focus-key]")?.dataset.focusKey
       focusKeyRef.current = key ?? null
     }
+    // Leaving a slide that is still on screen is deliberate; only focus lost to
+    // a slide becoming inert should follow the feed.
+    const onFocusOut = (event: FocusEvent) => {
+      if ((event.target as HTMLElement).closest(".feed-slide[data-current]")) focusKeyRef.current = null
+    }
     scroller.addEventListener("focusin", onFocusIn)
-    return () => scroller.removeEventListener("focusin", onFocusIn)
+    scroller.addEventListener("focusout", onFocusOut)
+    return () => {
+      scroller.removeEventListener("focusin", onFocusIn)
+      scroller.removeEventListener("focusout", onFocusOut)
+    }
   }, [isLoaded])
 
   useLayoutEffect(() => {
