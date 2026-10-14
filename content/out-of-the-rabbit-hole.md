@@ -5,7 +5,7 @@ date: "2026-10-14"
 tags: ["AI", "agents", "public services", "content moderation"]
 ---
 
-I am now out of the agentic flooding rabbit hole and communicate more clearly.
+I am now out of the agentic flooding rabbit hole and can communicate more clearly.
 
 ## Consumer access to scroll-speed classification of content by AI is significant
 
