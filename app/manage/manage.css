@@ -118,3 +118,10 @@
   .pm-list-tools .pm-primary { width: 100%; }
   .pm-writing-head { flex-wrap: wrap; }
 }
+
+.pm-digest { margin-bottom: 24px; }
+.pm-digest h2 { margin-top: 0; }
+.pm-digest-preview { margin-top: 20px; }
+.pm-digest-preview ul { padding-left: 22px; }
+.pm-digest-preview li { margin: 18px 0; }
+.pm-digest-preview a { color: inherit; overflow-wrap: anywhere; }

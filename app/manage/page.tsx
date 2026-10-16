@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import ReactMarkdown from "react-markdown"
 import { ArrowLeft, Check, Download, Feather, Plus, Search, Trash2, WifiOff } from "lucide-react"
 import "./manage.css"
+import { DigestManager } from "./digest-manager"
 
 type Post = { slug: string; title: string; description: string; date: string; tags: string[]; inReplyTo?: string[]; body: string; sha?: string }
 type PostWarning = { slug: string; message: string }
@@ -350,6 +351,7 @@ export default function ManagePosts() {
         {notice && <p role="status" className="pm-small">{notice}</p>}
         <div className="pm-actions"><button className="pm-primary" onClick={save} disabled={busy || publishing || !online || session !== "in" || conflict || !!recovery}>{busy ? "Working…" : "Save to site"}</button><button onClick={() => keepDraft(post, draftSlug)} disabled={busy}>Save device draft</button>{post.sha && <button className="pm-delete" aria-label="Delete post" disabled={busy || publishing || !online || session !== "in" || conflict} onClick={remove}><Trash2 size={19} /><span>Delete</span></button>}</div>
       </section> : <>
+        {session === "in" && <DigestManager online={online} />}
         {deviceDrafts.length > 0 && <section className="pm-device-drafts" aria-label="Device drafts"><h2>Device drafts</h2><p className="pm-small">Writing kept on this device. Continue online or offline; nothing publishes until you save to the site.</p>{deviceDrafts.map(draft => <div className="pm-device-draft" key={draft.key}><div><h3>{draft.post.title || "Untitled post"}</h3><span className="pm-small">{draft.savedAt && !Number.isNaN(Date.parse(draft.savedAt)) ? `Saved ${new Date(draft.savedAt).toLocaleString()}` : "Saved on this device"}</span></div><div className="pm-draft-buttons"><button aria-label={`Continue draft ${draft.post.title || "Untitled post"}`} onClick={() => continueDraft(draft)}>Continue draft</button><button className="pm-quiet" aria-label={`Discard draft ${draft.post.title || "Untitled post"}`} onClick={() => discardDraft(draft)}>Discard</button></div></div>)}</section>}
         <div className="pm-list-tools"><label className="pm-search"><Search size={18} /><span className="pm-sr-only">Search posts</span><input type="search" placeholder="Search your posts" value={query} onChange={e => setQuery(e.target.value)} /></label><button className="pm-primary" onClick={() => enter(emptyPost())} disabled={busy}><Plus size={19} /> New post</button></div>
         {session === "in" && <div className="pm-list-meta"><span>{posts.length} {posts.length === 1 ? "post" : "posts"} · {login}</span><button className="pm-quiet" disabled={loading || !online} onClick={loadPosts}>Refresh posts</button><button className="pm-quiet" disabled={busy || !online} onClick={async () => { setBusy(true); try { await api("/api/logout", { method: "POST", body: "{}" }); setSession("out"); setPosts([]); setWarnings([]) } catch (e) { handleError(e) } finally { setBusy(false) } }}>Sign out</button></div>}

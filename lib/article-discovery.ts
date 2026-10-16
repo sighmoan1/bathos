@@ -1,6 +1,6 @@
 import type { Article } from "./articles"
 import { postPath } from "./post-links"
-import { SITE_URL } from "./rss"
+import { SITE_URL } from "./site"
 
 // Accept real ISO publication dates only; do not turn missing dates into build times.
 export function publicationDate(value: unknown): string | null {

@@ -1,7 +1,8 @@
 import {ORIGIN,PREFIX,escapeHtml,verifyToken,verifyChallenge,verifyWebhook,emailAddress,boundedText,ipKey} from './security.mjs';
 import {statement,requestSubscription,stopSubscription} from './store.mjs';
 import {recordEvent} from './events.mjs';
-import {ready,dispatch,scheduled} from './delivery.mjs';
+import {ready,dispatch,scheduled,discover} from './delivery.mjs';
+import {managerAuthorized,digestPreview,queueDigest} from './digest.mjs';
 const headers={'Cache-Control':'no-store','Referrer-Policy':'no-referrer','X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY'};
 const json=(data,status=200)=>Response.json(data,{status,headers});
 const unavailable=()=>json({error:'Email subscriptions are temporarily unavailable. Please use RSS for now.'},503);
@@ -25,6 +26,23 @@ export async function handleRequest(request,env,upstream=fetch,clock=Date.now){
   if(url.origin!==ORIGIN||!url.pathname.startsWith(PREFIX))return json({error:'Not found.'},404);
   if(url.pathname===`${PREFIX}/status`&&request.method==='GET'){
    const enabled=await ready(env);return json({enabled,...(enabled?{siteKey:env.TURNSTILE_SITE_KEY}:{})});
+  }
+  if(url.pathname===`${PREFIX}/digest`&&['GET','POST'].includes(request.method)){
+   if(request.method==='POST'&&request.headers.get('Origin')!==ORIGIN)return json({error:'Reload the manager and try again.'},403);
+   if(!await managerAuthorized(request,env))return json({error:'Sign in to manage email updates.'},401);
+   if(!env.DB||!env.TOKEN_SECRET)return unavailable();
+   if(request.method==='POST'&&!request.headers.get('Content-Type')?.toLowerCase().startsWith('application/json'))return json({error:'Send JSON content.'},415);
+   // Refresh from deployed content, never unpublished manager drafts.
+   await discover(env,upstream,now);
+   const enabled=await ready(env);
+   if(request.method==='GET')return json({enabled,...await digestPreview(env,now)});
+   if(!enabled)return unavailable();
+   let data;try{data=JSON.parse(await boundedText(request.body,1024));}catch{return json({error:'Invalid update request.'},400);}
+   if(typeof data?.preview!=='string'||data.preview.length>500)return json({error:'Preview the update before sending.'},400);
+   const result=await queueDigest(env,now,{preview:data.preview});
+   if(result.busy||result.changed)return json({error:'The update changed. Refresh the preview before sending.'},409);
+   // Delivery is drained by the existing five-minute cron and quota controls.
+   return json(result,202);
   }
   if(url.pathname===PREFIX&&request.method==='POST'){
    if(request.headers.get('Origin')!==ORIGIN)return json({error:'Reload the subscription page and try again.'},403);
@@ -52,7 +70,7 @@ export async function handleRequest(request,env,upstream=fetch,clock=Date.now){
     value=new URLSearchParams(await boundedText(request.body,1024)).get('token');
    }
    if(!await confirmation(env,value,now,request.method==='POST'))return page('This link has expired','Please subscribe again to receive a new confirmation link.',null,null,400);
-   return request.method==='GET'?page('Confirm your subscription','Receive new Bathos posts by email. No ads. Tap below to confirm.', 'confirm',value):page('You’re subscribed','You will receive new posts from Bathos. You can unsubscribe using the link in any email.');
+   return request.method==='GET'?page('Confirm your subscription','Receive a weekly digest of new Bathos posts. No ads. Tap below to confirm.', 'confirm',value):page('You’re subscribed','You will receive a weekly digest when there are new posts from Bathos. You can unsubscribe using the link in any email.');
   }
   if(url.pathname===`${PREFIX}/unsubscribe`&&['GET','POST'].includes(request.method)){
    if(!env.DB||!env.TOKEN_SECRET)return unavailable();

@@ -6,10 +6,11 @@ import worker,{handleRequest} from './index.mjs';
 import {ORIGIN,PREFIX,token,verifyToken,emailAddress} from './security.mjs';
 import {discover,dispatch,scheduled,ready,catalogPosts} from './delivery.mjs';
 import {requestSubscription,statement,reserveQuota,acquireLock} from './store.mjs';
+import {queueDigest,digestPreview,nextDigestAt} from './digest.mjs';
 const NOW=Date.parse('2026-10-13T19:00:00Z');
 const secret=Buffer.alloc(32,7).toString('base64url');
 function database(){
- const sql=new DatabaseSync(':memory:');sql.exec('PRAGMA foreign_keys=ON');sql.exec(readFileSync(new URL('./migrations/0001_subscriptions.sql',import.meta.url),'utf8'));
+ const sql=new DatabaseSync(':memory:');sql.exec('PRAGMA foreign_keys=ON');for(const file of ['0001_subscriptions.sql','0002_weekly_digest.sql'])sql.exec(readFileSync(new URL('./migrations/'+file,import.meta.url),'utf8'));
  const wrap=(query,params=[])=>({bind(...values){return wrap(query,values);},async first(){return sql.prepare(query).all(...params)[0]||null;},async all(){return {results:sql.prepare(query).all(...params)};},async run(){const result=sql.prepare(query).run(...params);return {meta:{changes:Number(result.changes)}};}});
  return {prepare:wrap,async batch(queries){sql.exec('BEGIN');try{const rows=[];for(const query of queries)rows.push(await query.run());sql.exec('COMMIT');return rows;}catch(error){sql.exec('ROLLBACK');throw error;}},sql};
 }
@@ -72,7 +73,7 @@ test('baseline skips the archive, new posts enqueue only confirmed subscribers, 
  const f=fixture();await activate(f);await signup(f);await confirm(f);assert.equal(f.sent.length,1);
  assert.equal(f.DB.sql.prepare("SELECT count(*) n FROM jobs WHERE kind='post'").get().n,0);
  const post={slug:'new',title:'A <new> thought',summary:'Words & ideas',canonicalUrl:ORIGIN+'/posts/new/'};f.catalog.articles.push(post);
- await discover(f.env,f.upstream,NOW+1000);await dispatch(f.env,f.upstream,{clock:()=>NOW+1000,sleep:async()=>{}});
+ await discover(f.env,f.upstream,NOW+1000);await queueDigest(f.env,NOW+1000);await dispatch(f.env,f.upstream,{clock:()=>NOW+1000,sleep:async()=>{}});
  assert.equal(f.sent.length,2);assert.match(f.sent[1].body.html,/A &lt;new&gt; thought/);assert.match(f.sent[1].body.html,/Words &amp; ideas/);
  post.title='Edited title';await discover(f.env,f.upstream,NOW+2000);await dispatch(f.env,f.upstream,{clock:()=>NOW+2000,sleep:async()=>{}});assert.equal(f.sent.length,2);
 });
@@ -164,9 +165,95 @@ test('paused cron reconciles a receipt left pending after a crash and cancels qu
  const f=fixture();await activate(f);await signup(f);await confirm(f);
  f.catalog.articles.push({slug:'future',title:'Future',summary:'Summary',canonicalUrl:ORIGIN+'/posts/future/'});
  await discover(f.env,f.upstream,NOW+1000);
+ await queueDigest(f.env,NOW+1000);
  await statement(f.env,"INSERT INTO webhook_events(message_id,type,received_at) VALUES('message-1','email.complained',?)",NOW+1000).run();
  await scheduled({...f.env,DELIVERY_ENABLED:'false'},f.upstream,{clock:()=>NOW+2000});
  assert.equal((await statement(f.env,'SELECT status FROM subscribers').first()).status,'suppressed');
  assert.equal(f.DB.sql.prepare("SELECT count(*) n FROM jobs WHERE kind='post' AND state='cancelled'").get().n,1);
  assert.equal(f.sent.length,1);
+});
+
+const newPost=(slug)=>({slug,title:`Post ${slug}`,summary:`Summary ${slug}`,canonicalUrl:`${ORIGIN}/posts/${slug}/`});
+test('weekly digest batches new posts once, ignores edits, and sends nothing on empty weeks',async()=>{
+ const f=fixture();await activate(f);await signup(f);await confirm(f);
+ f.catalog.articles.push(newPost('first'),newPost('second'));
+ await scheduled(f.env,f.upstream,{clock:()=>NOW+1000,sleep:async()=>{}});
+ assert.equal(f.sent.length,1); // confirmation only, not a send per publication
+ const due=Number((await statement(f.env,"SELECT value FROM metadata WHERE key='next_digest_at'").first()).value);
+ await scheduled(f.env,f.upstream,{clock:()=>due,sleep:async()=>{}});
+ assert.equal(f.sent.length,2);assert.equal(f.sent[1].body.subject,'Bathos update: 2 new posts');
+ assert.match(f.sent[1].body.text,/Post first[\s\S]*Post second/);
+ assert.equal(f.DB.sql.prepare('SELECT count(*) n FROM digests').get().n,1);
+ f.catalog.articles[1].title='Edited after sending';
+ await scheduled(f.env,f.upstream,{clock:()=>nextDigestAt(due),sleep:async()=>{}});
+ assert.equal(f.sent.length,2);
+ assert.equal(f.DB.sql.prepare('SELECT count(*) n FROM digests').get().n,1);
+});
+test('manual and weekly sends share the ledger; current previews are required and concurrent sends deduplicate',async()=>{
+ const f=fixture();await activate(f);await signup(f);await confirm(f);
+ f.catalog.articles.push(newPost('manual'));await discover(f.env,f.upstream,NOW+1000);
+ const preview=await digestPreview(f.env,NOW+1000);
+ assert.equal((await queueDigest(f.env,NOW+1001,{preview:'forged'})).changed,true);
+ assert.equal((await queueDigest(f.env,NOW+16*60000,{preview:preview.preview})).changed,true);
+ const results=await Promise.all([1,2,3].map(()=>queueDigest(f.env,NOW+2000,{preview:preview.preview})));
+ assert.equal(results.filter(r=>r.queued===1).length,1);
+ await dispatch(f.env,f.upstream,{clock:()=>NOW+2000,sleep:async()=>{}});assert.equal(f.sent.length,2);
+ await scheduled(f.env,f.upstream,{clock:()=>nextDigestAt(NOW),sleep:async()=>{}});assert.equal(f.sent.length,2);
+ assert.equal((await queueDigest(f.env,NOW+3000,{preview:preview.preview})).changed,true);
+});
+test('preview changes with new content, excludes deleted posts, and uses edited copy without mailing edits again',async()=>{
+ const f=fixture();await activate(f);await signup(f);await confirm(f);
+ f.catalog.articles.push(newPost('changed'),newPost('removed'));await discover(f.env,f.upstream,NOW+1000);
+ const before=await digestPreview(f.env,NOW+1000);
+ f.catalog.articles[1].summary='Revised & ready';f.catalog.articles.pop();
+ await discover(f.env,f.upstream,NOW+2000);
+ assert.equal((await queueDigest(f.env,NOW+2000,{preview:before.preview})).changed,true);
+ const latest=await digestPreview(f.env,NOW+2000);assert.equal(latest.posts.length,1);
+ await queueDigest(f.env,NOW+2000,{preview:latest.preview});await dispatch(f.env,f.upstream,{clock:()=>NOW+2000,sleep:async()=>{}});
+ assert.match(f.sent[1].body.html,/Revised &amp; ready/);assert.doesNotMatch(f.sent[1].body.text,/removed/);
+ await discover(f.env,f.upstream,NOW+3000);assert.equal((await digestPreview(f.env,NOW+3000)).posts.length,0);
+});
+test('late subscribers receive only future discoveries and unsubscribed readers never receive a queued digest',async()=>{
+ const f=fixture();await activate(f);
+ f.catalog.articles.push(newPost('before-signup'));await discover(f.env,f.upstream,NOW+1000);
+ await signup(f,'reader@example.test',NOW+2000);await confirm(f,NOW+2000);
+ f.catalog.articles.push(newPost('after-signup'));await discover(f.env,f.upstream,NOW+3000);
+ await queueDigest(f.env,NOW+4000);await dispatch(f.env,f.upstream,{clock:()=>NOW+4000,sleep:async()=>{}});
+ assert.equal(f.sent.length,2);assert.match(f.sent[1].body.text,/after-signup/);assert.doesNotMatch(f.sent[1].body.text,/before-signup/);
+ f.catalog.articles.push(newPost('cancelled'));await discover(f.env,f.upstream,NOW+5000);await queueDigest(f.env,NOW+5000);
+ const url=f.sent[1].body.headers['List-Unsubscribe'].slice(1,-1);
+ await f.handle(new Request(url,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'List-Unsubscribe=One-Click'}));
+ await dispatch(f.env,f.upstream,{clock:()=>NOW+6000,sleep:async()=>{}});assert.equal(f.sent.length,2);
+});
+test('queue failure rolls back both digest jobs and consumed post markers',async()=>{
+ const f=fixture();await activate(f);await signup(f);await confirm(f);
+ f.catalog.articles.push(newPost('retry'));await discover(f.env,f.upstream,NOW+1000);
+ const batch=f.DB.batch.bind(f.DB);f.DB.batch=queries=>batch([...queries,statement(f.env,'INVALID SQL')]);
+ await assert.rejects(queueDigest(f.env,NOW+1000));
+ assert.equal((await digestPreview(f.env,NOW+1000)).posts.length,1);
+ assert.equal(f.DB.sql.prepare('SELECT count(*) n FROM digests').get().n,0);
+ f.DB.batch=batch;assert.equal((await queueDigest(f.env,NOW+1001)).queued,1);
+});
+test('manager digest endpoint requires existing authentication and same-origin previewed POST; disabled delivery cannot queue',async()=>{
+ const f=fixture();await activate(f);await signup(f);await confirm(f);
+ const path=PREFIX+'/digest',headers={Cookie:'__Host-bathos-session=fixture'};
+ assert.equal((await f.handle(f.req(path))).status,401);
+ f.env.ADMIN={fetch:async request=>{assert.equal(request.url,ORIGIN+'/api/session');assert.equal(request.headers.get('Cookie'),headers.Cookie);return Response.json({authenticated:true,user:{login:'owner'}});}};
+ f.catalog.articles.push(newPost('operator'));
+ const get=await f.handle(f.req(path,{headers}));assert.equal(get.status,200);const preview=await get.json();
+ assert.equal(preview.posts.length,1);
+ assert.equal((await f.handle(f.req(path,{method:'POST',origin:'https://evil.test',headers,data:{preview:preview.preview}}))).status,403);
+ assert.equal((await f.handle(f.req(path,{method:'POST',headers,data:{preview:'forged'}}))).status,409);
+ f.env.DELIVERY_ENABLED='false';assert.equal((await f.handle(f.req(path,{method:'POST',headers,data:{preview:preview.preview}}))).status,503);
+ f.env.DELIVERY_ENABLED='true';assert.equal((await f.handle(f.req(path,{method:'POST',headers,data:{preview:preview.preview}}))).status,202);
+ assert.equal(f.sent.length,1); // async cron owns transport
+ await dispatch(f.env,f.upstream,{clock:()=>NOW,sleep:async()=>{}});assert.equal(f.sent.length,2);
+});
+test('weekly schedule follows UK daylight saving and skips missed empty weeks without a catch-up flood',()=>{
+ for(const [now,next] of [
+  ['2026-10-16T12:00:00Z','2026-10-19T08:00:00Z'],
+  ['2026-10-19T08:00:00Z','2026-10-26T09:00:00Z'],
+  ['2027-03-22T09:00:00Z','2027-03-29T08:00:00Z'],
+  ['2026-10-19T07:59:00Z','2026-10-19T08:00:00Z'],
+ ])assert.equal(new Date(nextDigestAt(Date.parse(now))).toISOString(),new Date(next).toISOString());
 });
