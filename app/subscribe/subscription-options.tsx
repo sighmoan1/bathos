@@ -68,7 +68,7 @@ export function SubscriptionOptions({ children }: { children: ReactNode }) {
   return <div className={`subscription-options${siteKey ? "" : " subscription-rss-only"}`}>
     {siteKey && <section className="email-subscription" aria-labelledby="email-heading">
       <Mail size={24} /><h2 id="email-heading">By email</h2>
-      <p>New writing from Bathos, delivered to your inbox. No ads.</p>
+      <p>A weekly digest of new posts, on Mondays. No email when there’s nothing new, and no emails for edits. Occasionally, an extra update when a new batch is ready. No ads.</p>
       <form onSubmit={subscribe}>
         <label htmlFor="subscription-email">Email address</label>
         <input id="subscription-email" type="email" autoComplete="email" maxLength={254} required value={email} onChange={event => setEmail(event.target.value)} disabled={busy} />

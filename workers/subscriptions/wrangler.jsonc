@@ -42,12 +42,18 @@
       "head_sampling_rate": 0.1
     }
   },
+  // Provider keys are checked by ready() before signup or delivery can run.
+  // Core secrets remain required even when deploying the paused service.
   "secrets": {
     "required": [
-      "RESEND_API_KEY",
-      "RESEND_WEBHOOK_SECRET",
       "TOKEN_SECRET",
       "TURNSTILE_SECRET"
     ]
-  }
+  },
+  "services": [
+    {
+      "binding": "ADMIN",
+      "service": "bathos-admin-oauth"
+    }
+  ]
 }

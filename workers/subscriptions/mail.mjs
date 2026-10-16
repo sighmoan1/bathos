@@ -7,9 +7,14 @@ export async function messageFor(job,subscriber,env) {
   const confirmation=await token(env.TOKEN_SECRET,'confirm',`${subscriber.id}.${data.generation}.${data.expires}`);
   const link=`${ORIGIN}${PREFIX}/confirm?token=${encodeURIComponent(confirmation)}`;
   subject='Confirm your Bathos subscription';
-  text=`Please confirm that you want new Bathos posts by email:\n\n${link}\n\nThis link expires in 48 hours. If you did not request this, ignore this message.\nCancel this request: ${unsubscribe}`;
-  html=`<h1>New thoughts from Bathos</h1><p>Confirm that you want new posts by email. No ads.</p><p><a href="${escapeHtml(link)}">Confirm subscription</a></p><p>This link expires in 48 hours. If you did not request this, ignore this message.</p>`;
+  text=`Please confirm that you want a weekly digest of new Bathos posts by email:\n\n${link}\n\nThis link expires in 48 hours. If you did not request this, ignore this message.\nCancel this request: ${unsubscribe}`;
+  html=`<h1>New thoughts from Bathos</h1><p>Confirm that you want a weekly digest of new posts. No ads. No email when there is nothing new.</p><p><a href="${escapeHtml(link)}">Confirm subscription</a></p><p>This link expires in 48 hours. If you did not request this, ignore this message.</p>`;
+ } else if(Array.isArray(data.posts)&&data.posts.length){
+  subject=`Bathos update: ${data.posts.length} new ${data.posts.length===1?'post':'posts'}`;
+  text=`New writing from Bathos\n\n${data.posts.map(post=>`${post.title}\n${post.summary}\n${post.canonicalUrl}`).join('\n\n')}\n\nYou subscribed to the Bathos digest. Unsubscribe: ${unsubscribe}`;
+  html=`<h1>New writing from Bathos</h1>${data.posts.map(post=>`<h2><a href="${escapeHtml(post.canonicalUrl)}">${escapeHtml(post.title)}</a></h2><p>${escapeHtml(post.summary)}</p>`).join('')}<p>You subscribed to the Bathos digest.</p>`;
  } else {
+  // Preserve the body of legacy attempted jobs for provider idempotency.
   subject=`Bathos: ${data.title.replace(/[\r\n]/g,' ').slice(0,200)}`;
   text=`${data.title}\n\n${data.summary}\n\nRead the post: ${data.canonicalUrl}\n\nYou subscribed to new Bathos posts. Unsubscribe: ${unsubscribe}`;
   html=`<h1>${escapeHtml(data.title)}</h1><p>${escapeHtml(data.summary)}</p><p><a href="${escapeHtml(data.canonicalUrl)}">Read the post on Bathos</a></p><p>You subscribed to new Bathos posts.</p>`;

@@ -2,6 +2,7 @@ import {ORIGIN,boundedText} from './security.mjs';
 import {statement,acquireLock,releaseLock,reserveQuota} from './store.mjs';
 import {reconcileEvents,reconcilePending} from './events.mjs';
 import {sendMessage} from './mail.mjs';
+import {nextDigestAt,queueDigest} from './digest.mjs';
 export function configured(env) {
  return env.DELIVERY_ENABLED==='true'&&!!env.DB&&typeof env.RESEND_API_KEY==='string'&&env.RESEND_API_KEY.startsWith('re_')&&typeof env.TOKEN_SECRET==='string'&&/^[A-Za-z0-9_-]{43}$/.test(env.TOKEN_SECRET)&&!!env.TURNSTILE_SECRET&&!!env.TURNSTILE_SITE_KEY&&!!env.RESEND_WEBHOOK_SECRET&&/^Bathos <[a-z0-9.-]+@mail\.bathos\.org>$/.test(env.MAIL_FROM||'');
 }
@@ -21,19 +22,13 @@ export async function discover(env,upstream,now) {
   if(!response.ok)throw Error('catalog unavailable');
   const posts=catalogPosts(JSON.parse(await boundedText(response.body,1024*1024)));
   const baseline=!!await statement(env,"SELECT value FROM metadata WHERE key='baseline' AND value='1'").first();
-  for(const post of posts){
-   const known=await statement(env,'SELECT guid FROM posts WHERE guid=?',post.canonicalUrl).first();
-   if(known)continue;
-   const payload=JSON.stringify(post);
-   const batch=[statement(env,'INSERT INTO posts(guid,payload,discovered_at) VALUES(?,?,?) ON CONFLICT(guid) DO NOTHING',post.canonicalUrl,payload,now)];
-   if(baseline){
-    const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(post.canonicalUrl));
-    const id=Array.from(new Uint8Array(bytes),b=>b.toString(16).padStart(2,'0')).join('');
-    batch.push(statement(env,"INSERT INTO jobs(id,subscriber_id,kind,payload,created_at) SELECT 'post-'||?||'-'||id,id,'post',?,? FROM subscribers WHERE status='active' AND confirmed_at<=? ON CONFLICT(id) DO NOTHING",id,payload,now,now));
-   }
-   await env.DB.batch(batch);
-  }
-  if(!baseline)await statement(env,"INSERT INTO metadata(key,value) VALUES('baseline','1') ON CONFLICT(key) DO NOTHING").run();
+  const batch=[statement(env,'UPDATE posts SET available=0'),
+   statement(env,`INSERT INTO posts(guid,payload,discovered_at,included_at,available)
+    SELECT json_extract(value,'$.canonicalUrl'),value,?,?,1 FROM json_each(?) WHERE true
+    ON CONFLICT(guid) DO UPDATE SET payload=excluded.payload,available=1`,now,baseline?null:now,JSON.stringify(posts))];
+  if(!baseline)batch.push(statement(env,"INSERT INTO metadata(key,value) VALUES('baseline','1') ON CONFLICT(key) DO NOTHING"));
+  batch.push(statement(env,"INSERT INTO metadata(key,value) VALUES('next_digest_at',?) ON CONFLICT(key) DO NOTHING",String(nextDigestAt(now))));
+  await env.DB.batch(batch);
  }finally{await releaseLock(env,'catalog',owner);}
 }
 export async function dispatch(env,upstream,{clock=Date.now,sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms)),max=5,jobId=null}={}) {
@@ -87,5 +82,6 @@ export async function scheduled(env,upstream=fetch,options={}) {
  await cleanup(env,now);
  if(!configured(env))return;
  await discover(env,upstream,now);
+ await queueDigest(env,now,{weekly:true});
  return dispatch(env,upstream,options);
 }

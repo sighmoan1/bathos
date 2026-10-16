@@ -1,14 +1,10 @@
 const {test} = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const vm = require('node:vm');
-const ts = require('typescript');
-function load(file, context = {}) {
- const exports = {};
- vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'), {compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText, {exports,URL,process:{env:{}},...context});
- return exports;
-}
-const {buildRss} = load('lib/rss.ts');
+const {buildSync} = require('../workers/admin-oauth/node_modules/esbuild');
+const bundled = buildSync({entryPoints:['lib/rss.ts'],bundle:true,platform:'node',format:'cjs',write:false}).outputFiles[0].text;
+const compiled = {exports:{}};
+new Function('require','module','exports',bundled)(require,compiled,compiled.exports);
+const {buildRss} = compiled.exports;
 test('feed has deterministic newest-first ordering and stable case-sensitive identities', () => {
  const posts = [{slug:'old',title:'Old',description:'Old summary',date:'2025-01-01'}, {slug:'Gassing',title:'Gassing',description:'Summary',date:'2026-10-12',tags:['reflection']},{slug:'latest',title:'Latest',description:'Latest summary',date:'2026-10-13'}];
  const output = buildRss(posts);
@@ -27,4 +23,18 @@ test('XML escapes metadata and rejects prohibited control characters; absent dat
  assert.match(output,/caf%C3%A9/);
  assert.doesNotMatch(output,/<pubDate>|<lastBuildDate>|Invalid Date|\u0001|<script>/);
  assert.doesNotThrow(()=>buildRss([]));
+});
+
+test('full-text RSS renders Markdown, tables and code with absolute safe links and images',()=>{
+ const output=buildRss([{slug:'hello',title:'Hello',description:'Short summary',content:'# Heading\n\nA **bold** idea with [a link](/read/other/) and [a section](#details).\n\n![Actual image](/images/posts/hello/photo.png)\n\n- First\n- Second\n\n| A | B |\n| --- | --- |\n| x | y |\n\n```js\nconst x = "<&"\n```\n\n<script>alert(1)</script>\n\n[bad](javascript:alert(1))'}]);
+ assert.match(output,/xmlns:content="http:\/\/purl.org\/rss\/1.0\/modules\/content\/"/);
+ const body=output.match(/<content:encoded>([\s\S]*?)<\/content:encoded>/)[1].replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&amp;/g,'&');
+ assert.match(body,/<h1>Heading<\/h1>/);
+ assert.match(body,/<strong>bold<\/strong>/);
+ assert.match(body,/href="https:\/\/bathos.org\/read\/other\/"/);
+ assert.match(body,/href="https:\/\/bathos.org\/posts\/hello\/#details"/);
+ assert.match(body,/src="https:\/\/bathos.org\/images\/posts\/hello\/photo.png"/);
+ assert.match(body,/<table>/);assert.match(body,/<ul>/);assert.match(body,/<pre><code/);
+ assert.doesNotMatch(body,/<script|javascript:|onerror=/);
+ assert.match(output,/<description>Short summary<\/description>/);
 });

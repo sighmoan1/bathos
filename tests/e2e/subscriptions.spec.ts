@@ -10,12 +10,13 @@ test('RSS contains every published post with valid XML, dates and stable canonic
  const xml=await response.text()
  const parsed=await page.evaluate(xml=>{
   const doc=new DOMParser().parseFromString(xml,'application/xml')
-  return {errors:doc.querySelectorAll('parsererror').length,items:[...doc.querySelectorAll('item')].map(item=>({title:item.querySelector('title')?.textContent,link:item.querySelector('link')?.textContent,guid:item.querySelector('guid')?.textContent,date:item.querySelector('pubDate')?.textContent}))}
+  return {errors:doc.querySelectorAll('parsererror').length,items:[...doc.querySelectorAll('item')].map(item=>({title:item.querySelector('title')?.textContent,link:item.querySelector('link')?.textContent,guid:item.querySelector('guid')?.textContent,date:item.querySelector('pubDate')?.textContent,content:item.getElementsByTagNameNS('http://purl.org/rss/1.0/modules/content/','encoded')[0]?.textContent}))}
  },xml)
  expect(parsed.errors).toBe(0)
  const slugs=fs.readdirSync('content').filter(name=>name.endsWith('.md')).map(name=>name.slice(0,-3))
  expect(parsed.items).toHaveLength(slugs.length)
  for(const slug of slugs){const url=`https://bathos.org/posts/${encodeURIComponent(slug)}/`;expect(parsed.items.some(item=>item.link===url&&item.guid===url)).toBe(true)}
+ for(const item of parsed.items) {expect(item.content).toBeTruthy();expect(item.content).toMatch(/<(p|h[1-6]|blockquote|ul|ol|table)[ >]/);expect(item.content).not.toMatch(/(?:src|href)="\//)}
  for(const item of parsed.items) if(item.date) expect(Number.isFinite(Date.parse(item.date))).toBe(true)
  const dates=parsed.items.filter(i=>i.date).map(i=>Date.parse(i.date!))
  expect(dates).toEqual([...dates].sort((a,b)=>b-a))
