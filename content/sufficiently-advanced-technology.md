@@ -1,6 +1,6 @@
 ---
-title: "Sufficiently advanced technology"
-description: "AI, hyperstition, robo-vampires and the futures we summon with our words."
+title: "Any sufficiently advanced technology"
+description: "Are we there yet?"
 date: "2026-10-15"
 tags: ["AI", "accelerationism", "philosophy", "reflection"]
 ---
