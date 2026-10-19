@@ -1,5 +1,5 @@
 ---
-title: "Cans of SPAM are getting larger, stay alert"
+title: "Cans of SPAM are getting larger"
 description: "What else is being sent to us from a future that wants us to avoid it?"
 date: "2026-10-19"
 tags: ["SPAM", "the future", "Todmorden"]
