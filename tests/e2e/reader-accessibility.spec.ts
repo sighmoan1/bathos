@@ -145,8 +145,16 @@ test('mouse vertical drags follow the pointer and navigate one post without savi
     await page.mouse.move(x, y)
     await page.mouse.down()
     await page.mouse.move(x + dx, y + dy, { steps: 12 })
-    const transform = await current(page).locator('.feed-card').evaluate(element => getComputedStyle(element).transform)
-    expect(transform).not.toBe('none')
+    const scroller = page.locator('.feed-scroller')
+    const geometry = await scroller.evaluate(element => ({ top: element.scrollTop, height: element.clientHeight }))
+    if (dy < -96) {
+      // The actual next slide enters the viewport during the pull.
+      const next = current(page).locator('xpath=following-sibling::section[1]')
+      const rect = await next.boundingBox()
+      expect(rect!.y).toBeLessThan(geometry.height)
+      expect(geometry.top % geometry.height).toBeGreaterThan(0)
+    }
+    expect(await current(page).locator('.feed-card').evaluate(element => getComputedStyle(element).transform)).toBe('none')
     await page.mouse.up()
   }
   await drag(-160, 25)
@@ -157,8 +165,10 @@ test('mouse vertical drags follow the pointer and navigate one post without savi
   await expect(currentTitle(page)).toHaveText(first)
   await expect.poll(() => current(page).locator('.feed-card').evaluate(element => getComputedStyle(element).transform)).toBe('none')
   await expect.poll(() => page.locator('.feed-scroller').evaluate(element => Math.round(element.scrollTop))).toBe(0)
-  await drag(160) // First-card boundary springs back.
+  await drag(160) // First-card boundary stays put.
   await expect(currentTitle(page)).toHaveText(first)
+  await drag(-30) // A short pull reveals the next card, then returns.
+  await expect.poll(() => page.locator('.feed-scroller').evaluate(element => Math.round(element.scrollTop))).toBe(0)
   await expect.poll(() => current(page).locator('.feed-card').evaluate(element => getComputedStyle(element).transform)).toBe('none')
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('swipe-reader-saved') ?? '[]'))).toEqual([])
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('swipe-reader-dismissed') ?? '[]'))).toEqual([])

@@ -20,8 +20,8 @@ interface FeedSlideProps {
   onBin: () => void
   onBinned: () => void
   onSwipeSave: () => void
-  onNext: () => void
-  onPrevious: () => void
+  onVerticalDrag: (offset: number) => void
+  onVerticalDragEnd: (offset: number, velocity: number) => void
   onToggleSave: () => void
   onRead: () => void
   onTagClick: (tag: string) => void
@@ -33,7 +33,7 @@ const FLICK_DISTANCE = 40
 const FLICK_VELOCITY = 600
 
 /**
- * Mouse drags lock to one axis: vertical moves through posts, sideways bins
+ * Mouse drags lock to one axis: vertical pulls the feed, sideways bins
  * left and bookmarks right. Touch keeps native vertical scrolling via pan-y.
  */
 export function FeedSlide({
@@ -47,15 +47,14 @@ export function FeedSlide({
   onBin,
   onBinned,
   onSwipeSave,
-  onNext,
-  onPrevious,
+  onVerticalDrag,
+  onVerticalDragEnd,
   onToggleSave,
   onRead,
   onTagClick,
 }: FeedSlideProps) {
   const reducedMotion = useReducedMotion()
   const x = useMotionValue(0)
-  const y = useMotionValue(0)
   const dragAxis = useRef<"x" | "y" | null>(null)
   const pointerStart = useRef({ x: 0, y: 0 })
   const rotate = useTransform(x, [-300, 300], [-6, 6])
@@ -91,12 +90,7 @@ export function FeedSlide({
     }, 0)
     if (dragAxis.current === "y") {
       const distance = _event instanceof PointerEvent ? _event.clientY - pointerStart.current.y : info.offset.y
-      const velocity = info.velocity.y
-      if (Math.abs(distance) > SWIPE_DISTANCE || (Math.abs(distance) > FLICK_DISTANCE && Math.sign(distance) * velocity > FLICK_VELOCITY)) {
-        if (distance < 0) onNext()
-        else onPrevious()
-      }
-      animate(y, 0, reducedMotion ? { duration: 0 } : { type: "spring", stiffness: 500, damping: 40 })
+      onVerticalDragEnd(distance, info.velocity.y)
       return
     }
     const { x: dx } = info.offset
@@ -130,7 +124,7 @@ export function FeedSlide({
 
         <motion.div
           className="feed-card"
-          style={{ x, y, rotate: reducedMotion ? 0 : rotate }}
+          style={{ x, rotate: reducedMotion ? 0 : rotate }}
           drag={current && !leaving ? "x" : false}
           onPointerDown={(event) => {
             dragAxis.current = null
@@ -138,7 +132,7 @@ export function FeedSlide({
           }}
           onDrag={(event) => {
             // Keep Motion's native pan-y touch behavior. Mouse vertical drags
-            // move the card on a separate value without competing with scroll.
+            // move the scroller so the adjacent article is visible underneath.
             if (!(event instanceof PointerEvent) || event.pointerType !== "mouse") return
             // PanInfo offsets include an in-flight feed scroll. Choose the axis
             // from screen coordinates so grabbing the next card cannot bin it
@@ -150,7 +144,7 @@ export function FeedSlide({
             }
             if (dragAxis.current === "y") {
               x.set(0)
-              y.set(dy * 0.9)
+              onVerticalDrag(dy)
             }
           }}
           dragMomentum={false}

@@ -65,8 +65,8 @@ export function useFeedKeyboard(enabled: boolean, handlers: FeedKeyboardHandlers
 }
 
 interface FeedWheelHandlers {
-  onNext: () => void
-  onPrevious: () => void
+  onVerticalStart: () => void
+  onVerticalEnd: (cancelled: boolean) => void
   onSkip: () => void
   onSave: () => void
 }
@@ -75,22 +75,17 @@ interface FeedWheelHandlers {
 // tail. A gap this long means the burst is over and the next event starts a
 // fresh gesture.
 const GESTURE_GAP_MS = 160
-// How far a gesture has to travel before it counts. Skipping bins an article,
-// so sideways gestures need a firmer push than vertical ones.
-const VERTICAL_THRESHOLD = 40
+const VERTICAL_SETTLE_MS = 120
+// Binning needs a deliberate sideways gesture.
 const HORIZONTAL_THRESHOLD = 60
 // ...and they have to be clearly sideways, since no trackpad swipe is ever
 // perfectly on-axis.
 const HORIZONTAL_DOMINANCE = 1.4
 
 /**
- * Two-finger trackpad / wheel navigation on both axes: vertical moves through
- * the feed, horizontal bins and saves, mirroring the touch swipe directions.
- *
- * Deltas are accumulated across each gesture and the axis is decided once the
- * gesture is big enough to read, rather than from the first (tiny, ambiguous)
- * event. Exactly one action fires per gesture, so a firm flick and its
- * momentum tail can't run away with several cards.
+ * The browser owns vertical trackpad scrolling and momentum, revealing adjacent
+ * slides as the fingers move. Only sideways save/bin gestures are intercepted.
+ * A vertical movement or reversal must never wait for a momentum-tail timeout.
  */
 export function useFeedWheel(
   ref: RefObject<HTMLElement | null>,
@@ -108,12 +103,13 @@ export function useFeedWheel(
     let accX = 0
     let accY = 0
     let fired = false
+    let vertical = false
+    let settle: ReturnType<typeof setTimeout> | undefined
 
     const onWheel = (event: WheelEvent) => {
-      // The feed owns both axes: one gesture moves exactly one post, and a
-      // sideways swipe must not become browser back/forward in Chrome.
-      event.preventDefault()
-
+      // Preserve browser zoom and native vertical scrolling, including small
+      // deltas and direction changes during a trackpad's momentum tail.
+      if (event.ctrlKey) return
       const now = Date.now()
       if (now - lastEventAt > GESTURE_GAP_MS) {
         accX = 0
@@ -121,31 +117,44 @@ export function useFeedWheel(
         fired = false
       }
       lastEventAt = now
-
       accX += event.deltaX
       accY += event.deltaY
+      // A noisy sideways sample inside a vertical gesture is still scrolling.
+      if (Math.abs(event.deltaX) <= Math.abs(event.deltaY) * HORIZONTAL_DOMINANCE ||
+          Math.abs(accX) <= Math.abs(accY) * HORIZONTAL_DOMINANCE) {
+        if (!event.deltaY) return
+        vertical = true
+        handlersRef.current.onVerticalStart()
+        clearTimeout(settle)
+        settle = setTimeout(() => {
+          vertical = false
+          handlersRef.current.onVerticalEnd(false)
+        }, VERTICAL_SETTLE_MS)
+        return
+      }
+      if (vertical) {
+        clearTimeout(settle)
+        vertical = false
+        handlersRef.current.onVerticalEnd(true)
+      }
+      // A sideways swipe must not become browser back/forward navigation.
+      event.preventDefault()
+
       if (fired) return
 
-      const absX = Math.abs(accX)
-      const absY = Math.abs(accY)
-
-      if (absX > absY * HORIZONTAL_DOMINANCE) {
-        if (absX < HORIZONTAL_THRESHOLD) return
-        fired = true
-        // With natural scrolling, fingers moving left report deltaX > 0 —
-        // the same direction as dragging the card left to skip it.
-        if (accX > 0) handlersRef.current.onSkip()
-        else handlersRef.current.onSave()
-      } else {
-        if (absY < VERTICAL_THRESHOLD) return
-        fired = true
-        if (accY > 0) handlersRef.current.onNext()
-        else handlersRef.current.onPrevious()
-      }
+      if (Math.abs(accX) < HORIZONTAL_THRESHOLD) return
+      fired = true
+      // Natural scrolling reports a leftward finger swipe as positive deltaX.
+      if (accX > 0) handlersRef.current.onSkip()
+      else handlersRef.current.onSave()
     }
 
     element.addEventListener("wheel", onWheel, { passive: false })
-    return () => element.removeEventListener("wheel", onWheel)
+    return () => {
+      element.removeEventListener("wheel", onWheel)
+      clearTimeout(settle)
+      if (vertical) handlersRef.current.onVerticalEnd(true)
+    }
   }, [ref, enabled])
 }
 
