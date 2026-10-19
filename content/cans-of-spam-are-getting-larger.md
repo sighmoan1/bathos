@@ -25,7 +25,7 @@ During the process, our heroine became aware of the absurdity and growing audien
 
 With Farmaggedon looming, a determined woman (dark hair, GSOH, over 1800g of SPAM) rose to the status of national icon, at a wistful distance, beloved by us all.
 
-This was deeply concerning and profoundly alarming, the psychologist and I agreed. While the NHS cannot sustain a container for his Jungian work right now, we could both feel the archetypal force erupting into this cosmic hotspot. This was an archetype for a nation we had not recognised in ourselves prior.
+This was deeply concerning and profoundly alarming, the psychologist and I agreed. While the NHS cannot sustain a container for his Jungian work right now, we could both feel the archetypal force erupting into this cosmic hotspot. This was an archetype for a nation we had not recognised in ourselves prior. In fact, neither of us had been part of a crowd that was getting swept up in collective pride and admiration in this way. This is the sort of thing that only happens in propaganda films, hyperreal short-form video and mid-market national newspapers. And we, of course, are immune to such things.
 
 Farmaggedon? Giant cans of SPAM? This can't be good. Later that same day, other newspapers ran headlines about preparing for war.
 
@@ -35,6 +35,4 @@ The last time SPAM entered my life in a big way, a worst case scenario disaster 
 
 That can was about a third of the size. The original domestic SPAM can – sent to protect humanity during WWII – was about a fifth.
 
-What else is being sent to us from a future that wants us to avoid it?
-
-Look lively out there.
+What else is being sent to us from a future that wants us to avoid it? Stay alert.
