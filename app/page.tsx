@@ -1,9 +1,8 @@
-import { getAllArticles, getAllTags, shuffleArray } from "@/lib/articles"
+import { getAllArticles, getAllTags } from "@/lib/articles"
 import { SwipeFeed } from "@/components/swipe-feed"
 
 export default function Home() {
   const articles = getAllArticles()
-  const shuffledArticles = shuffleArray(articles)
   const allTags = getAllTags(articles)
 
   return (
@@ -15,7 +14,7 @@ export default function Home() {
           <p className="mt-4"><a className="text-accent underline" href="/articles/">Browse all articles</a> and read them without JavaScript.</p>
         </main>
       </noscript>
-      <div data-swipe-reader className="contents"><SwipeFeed initialArticles={shuffledArticles} allTags={allTags} /></div>
+      <div data-swipe-reader className="contents"><SwipeFeed initialArticles={articles} allTags={allTags} /></div>
     </>
   )
 }
