@@ -133,6 +133,37 @@ test('sideways drags bin and bookmark; scrolling moves between posts', async ({ 
   await expect(page.getByRole('dialog').getByRole('button', { name: `Read ${binned}`, exact: true })).toBeVisible()
 })
 
+test('mouse vertical drags follow the pointer and navigate one post without saving or binning', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'Touch uses native vertical scrolling')
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await page.goto('/')
+  const first = await currentTitle(page).innerText()
+  const drag = async (dy: number, dx = 0) => {
+    const box = await current(page).locator('.feed-description').boundingBox()
+    const x = box!.x + box!.width / 2
+    const y = box!.y + box!.height / 2
+    await page.mouse.move(x, y)
+    await page.mouse.down()
+    await page.mouse.move(x + dx, y + dy, { steps: 12 })
+    const transform = await current(page).locator('.feed-card').evaluate(element => getComputedStyle(element).transform)
+    expect(transform).not.toBe('none')
+    await page.mouse.up()
+  }
+  await drag(-160, 25)
+  await expect(currentTitle(page)).not.toHaveText(first)
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect.poll(() => current(page).locator('.feed-card').evaluate(element => getComputedStyle(element).transform)).toBe('none')
+  await drag(160, -25)
+  await expect(currentTitle(page)).toHaveText(first)
+  await expect.poll(() => current(page).locator('.feed-card').evaluate(element => getComputedStyle(element).transform)).toBe('none')
+  await expect.poll(() => page.locator('.feed-scroller').evaluate(element => Math.round(element.scrollTop))).toBe(0)
+  await drag(160) // First-card boundary springs back.
+  await expect(currentTitle(page)).toHaveText(first)
+  await expect.poll(() => current(page).locator('.feed-card').evaluate(element => getComputedStyle(element).transform)).toBe('none')
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('swipe-reader-saved') ?? '[]'))).toEqual([])
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('swipe-reader-dismissed') ?? '[]'))).toEqual([])
+})
+
 test('every article keeps its reading action and rail visible on phones, filtered or not', async ({ browser }) => {
   const articles = fs.readdirSync(path.join(process.cwd(), 'content')).filter(name => name.endsWith('.md')).sort().map(name => ({
     slug: name.slice(0, -3),
