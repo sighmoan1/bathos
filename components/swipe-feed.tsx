@@ -523,6 +523,8 @@ export function SwipeFeed({ initialArticles, allTags, initialReadingArticle }: S
               onBin={requestBin}
               onBinned={handleBinned}
               onSwipeSave={saveAndAdvance}
+              onNext={handleNext}
+              onPrevious={handlePrevious}
               onToggleSave={toggleSave}
               onRead={handleRead}
               onTagClick={handleToggleTag}
