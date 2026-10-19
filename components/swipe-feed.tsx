@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useMemo, useRef, useLayoutEffect } from "react"
-import { AnimatePresence, useReducedMotion } from "framer-motion"
+import { animate, AnimatePresence, useReducedMotion, type AnimationPlaybackControls } from "framer-motion"
 import {
   Bookmark,
   BookOpen,
@@ -50,6 +50,7 @@ export function SwipeFeed({ initialArticles, allTags, initialReadingArticle }: S
   const [saved, setSaved] = useState<string[]>([])
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [index, setIndex] = useState(0)
+  const [draggingIndex, setDraggingIndex] = useState<number | null>(null)
   const [leavingSlug, setLeavingSlug] = useState<string | null>(null)
   const [readingArticle, setReadingArticle] = useState<Article | null>(initialReadingArticle ?? null)
   const [showSaved, setShowSaved] = useState(false)
@@ -119,7 +120,7 @@ export function SwipeFeed({ initialArticles, allTags, initialReadingArticle }: S
 
   // One slide per article plus the closing "caught up" slide.
   const slideCount = articles.length + 1
-  const currentIndex = Math.min(index, slideCount - 1)
+  const currentIndex = Math.min(draggingIndex ?? index, slideCount - 1)
   const currentArticle = articles[currentIndex]
   const hasArticles = articles.length > 0
 
@@ -143,6 +144,10 @@ export function SwipeFeed({ initialArticles, allTags, initialReadingArticle }: S
   // a slide leaves scrollTop alone, so the next article slides into its place.
   const feedRef = useRef<HTMLElement>(null)
   const targetRef = useRef<number | null>(null)
+  const scrollAnimationRef = useRef<AnimationPlaybackControls | null>(null)
+  const snapRestoreRef = useRef<string | null>(null)
+  const nativeScrollRef = useRef<{ index: number; top: number; snap: string } | null>(null)
+  useEffect(() => () => scrollAnimationRef.current?.stop(), [])
   const slideCountRef = useRef(slideCount)
   slideCountRef.current = slideCount
 
@@ -178,10 +183,99 @@ export function SwipeFeed({ initialArticles, allTags, initialReadingArticle }: S
       if (!scroller) return
       const next = Math.max(0, Math.min(slideCountRef.current - 1, target))
       targetRef.current = next
-      scroller.scrollTo({ top: next * scroller.clientHeight, behavior: instant || reducedMotion ? "instant" : "smooth" })
+      nativeScrollRef.current = null
+      scrollAnimationRef.current?.stop()
+      scrollAnimationRef.current = null
+      const top = next * scroller.clientHeight
+      const snap = snapRestoreRef.current
+      if (snap !== null && !instant && !reducedMotion) {
+        // Keep native snapping disabled through the settling animation. Turning
+        // it on halfway through would fight a quick reversal or snap backwards.
+        scrollAnimationRef.current = animate(scroller.scrollTop, top, {
+          duration: 0.26,
+          ease: [0.22, 1, 0.36, 1],
+          onUpdate: (value) => scroller.scrollTo({ top: value, behavior: "instant" }),
+          onComplete: () => {
+            scroller.style.scrollSnapType = snap
+            snapRestoreRef.current = null
+            scrollAnimationRef.current = null
+          },
+        })
+      } else {
+        scroller.scrollTo({ top, behavior: instant || reducedMotion ? "instant" : "smooth" })
+        if (snap !== null) {
+          scroller.style.scrollSnapType = snap
+          snapRestoreRef.current = null
+        }
+      }
     },
     [reducedMotion],
   )
+
+  const beginNativeScroll = useCallback(() => {
+    const scroller = feedRef.current
+    if (!scroller || nativeScrollRef.current) return
+    scrollAnimationRef.current?.stop()
+    scrollAnimationRef.current = null
+    nativeScrollRef.current = {
+      index: Math.round(scroller.scrollTop / (scroller.clientHeight || 1)),
+      top: scroller.scrollTop,
+      snap: snapRestoreRef.current ?? scroller.style.scrollSnapType,
+    }
+    snapRestoreRef.current = nativeScrollRef.current.snap
+    targetRef.current = null
+    // Let every native wheel delta move the feed, without the browser snapping
+    // back between small trackpad events. Restore snapping when input settles.
+    scroller.style.scrollSnapType = "none"
+    // A new gesture takes over immediately from a prior settling animation.
+    scroller.scrollTo({ top: scroller.scrollTop, behavior: "instant" })
+  }, [])
+
+  const endNativeScroll = useCallback((cancelled: boolean) => {
+    const scroller = feedRef.current
+    const origin = nativeScrollRef.current
+    if (!scroller || !origin) return
+    nativeScrollRef.current = null
+    const distance = scroller.scrollTop - origin.top
+    let target = Math.round(scroller.scrollTop / (scroller.clientHeight || 1))
+    // A short, deliberate flick still advances a card; longer gestures can
+    // naturally scroll across several cards. Reversals use actual net travel.
+    if (target === origin.index && Math.abs(distance) > 40) target += Math.sign(distance)
+    if (cancelled) {
+      scroller.style.scrollSnapType = origin.snap
+      snapRestoreRef.current = null
+    } else goTo(target)
+  }, [goTo])
+
+  const verticalDragRef = useRef<{ index: number; top: number; snap: string } | null>(null)
+  const dragVertically = useCallback((offset: number) => {
+    const scroller = feedRef.current
+    if (!scroller) return
+    if (!verticalDragRef.current) {
+      endNativeScroll(true)
+      scrollAnimationRef.current?.stop()
+      scrollAnimationRef.current = null
+      const origin = Math.round(scroller.scrollTop / (scroller.clientHeight || 1))
+      verticalDragRef.current = { index: origin, top: origin * scroller.clientHeight, snap: snapRestoreRef.current ?? scroller.style.scrollSnapType }
+      snapRestoreRef.current = verticalDragRef.current.snap
+      // Pin interaction to the grabbed card until release. Neighboring cards
+      // remain visible but inert while the feed follows the mouse.
+      setDraggingIndex(origin)
+      targetRef.current = null
+      scroller.style.scrollSnapType = "none"
+    }
+    scroller.scrollTo({ top: verticalDragRef.current.top - offset, behavior: "instant" })
+  }, [endNativeScroll])
+
+  const endVerticalDrag = useCallback((offset: number, velocity: number) => {
+    const scroller = feedRef.current
+    const origin = verticalDragRef.current
+    if (!scroller || !origin) return
+    verticalDragRef.current = null
+    setDraggingIndex(null)
+    const deliberate = Math.abs(offset) > 96 || (Math.abs(offset) > 40 && Math.sign(offset) * velocity > 600)
+    goTo(origin.index + (deliberate ? (offset < 0 ? 1 : -1) : 0))
+  }, [goTo])
 
   // Steps compose: two quick presses move two slides even mid-animation. The
   // end of the feed wraps back to the first article.
@@ -358,8 +452,8 @@ export function SwipeFeed({ initialArticles, allTags, initialReadingArticle }: S
     onRead: handleRead,
   })
   useFeedWheel(feedRef, feedControls, {
-    onNext: handleNext,
-    onPrevious: handlePrevious,
+    onVerticalStart: beginNativeScroll,
+    onVerticalEnd: endNativeScroll,
     onSkip: requestBin,
     onSave: saveAndAdvance,
   })
@@ -523,8 +617,8 @@ export function SwipeFeed({ initialArticles, allTags, initialReadingArticle }: S
               onBin={requestBin}
               onBinned={handleBinned}
               onSwipeSave={saveAndAdvance}
-              onNext={handleNext}
-              onPrevious={handlePrevious}
+              onVerticalDrag={dragVertically}
+              onVerticalDragEnd={endVerticalDrag}
               onToggleSave={toggleSave}
               onRead={handleRead}
               onTagClick={handleToggleTag}
