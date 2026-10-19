@@ -15,7 +15,7 @@ During this process, we noticed the local newspaper headline: "Farmaggedon plot"
 
 Then we turned and saw a woman emptying 1.81kg of SPAM on to a plate from a long tin.
 
-![A hand lifts a tall SPAM tin from a large block of meat on a white plate, with four smaller tins behind it and the words 1\.81kg of SPAM below\.](/images/posts/cans-of-spam-are-getting-larger/giant-spam.png)
+![A hand holds a tall blue and yellow SPAM tin labelled 1\.81kg, with more large tins in cardboard boxes behind it\.](/images/posts/cans-of-spam-are-getting-larger/spam-tin.png)
 
 For those who have not seen such a sight, it's beyond me to explain. But I will try, inspired by our heroine's force of will.
 
