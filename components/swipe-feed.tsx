@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react"
 import type { Article, TagCount } from "@/lib/articles"
+import { sessionFeedOrder } from "@/lib/feed-order"
 import { postPath } from "@/lib/post-links"
 import { FeedSlide } from "./feed-slide"
 import { ArticleReader } from "./article-reader"
@@ -46,6 +47,7 @@ export function SwipeFeed({ initialArticles, allTags, initialReadingArticle }: S
   useMobileLayout()
   const pwa = useReaderPwa()
   const reducedMotion = useReducedMotion()
+  const [orderedArticles, setOrderedArticles] = useState(initialArticles)
   const [dismissed, setDismissed] = useState<string[]>([])
   const [saved, setSaved] = useState<string[]>([])
   const [selectedTags, setSelectedTags] = useState<string[]>([])
@@ -83,6 +85,10 @@ export function SwipeFeed({ initialArticles, allTags, initialReadingArticle }: S
 
   // Load preferences from localStorage
   useEffect(() => {
+    // Run after hydration: exported HTML stays deterministic, randomness is per tab.
+    let storage: Storage | undefined
+    try { storage = window.sessionStorage } catch { /* Storage may be disabled. */ }
+    setOrderedArticles(sessionFeedOrder(initialArticles, storage))
     const storedDismissed = localStorage.getItem(DISMISSED_KEY)
     const storedSaved = localStorage.getItem(SAVED_KEY)
     const storedTags = localStorage.getItem(TAGS_KEY)
@@ -105,17 +111,15 @@ export function SwipeFeed({ initialArticles, allTags, initialReadingArticle }: S
     if (isLoaded) localStorage.setItem(TAGS_KEY, JSON.stringify(selectedTags))
   }, [selectedTags, isLoaded])
 
-  // The deck is derived, never re-shuffled. `initialArticles` arrives already
-  // shuffled from the server, so its order is stable for the whole session and
-  // binning an article closes the gap without scrambling the feed.
+  // Filter the session deck without changing its relative order.
   const articles = useMemo(
     () =>
-      initialArticles.filter((article) => {
+      orderedArticles.filter((article) => {
         if (dismissed.includes(article.slug)) return false
         if (selectedTags.length === 0) return true
         return (article.tags || []).some((tag) => selectedTags.includes(tag))
       }),
-    [initialArticles, dismissed, selectedTags],
+    [orderedArticles, dismissed, selectedTags],
   )
 
   // One slide per article plus the closing "caught up" slide.
@@ -126,8 +130,8 @@ export function SwipeFeed({ initialArticles, allTags, initialReadingArticle }: S
 
   // Count only bookmarks that resolve in this catalog, just like the saved list.
   // Keep stored slugs so restored posts retain bookmarks.
-  const savedArticles = initialArticles.filter((a) => saved.includes(a.slug))
-  const trashedArticles = initialArticles.filter((a) => dismissed.includes(a.slug))
+  const savedArticles = orderedArticles.filter((a) => saved.includes(a.slug))
+  const trashedArticles = orderedArticles.filter((a) => dismissed.includes(a.slug))
 
   const showToast = useCallback((message: string, action?: Toast["action"]) => {
     setToast({ id: Date.now(), message, action })
