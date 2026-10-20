@@ -216,7 +216,12 @@ export function SwipeFeed({ initialArticles, allTags, initialReadingArticle }: S
     [reducedMotion],
   )
 
+  const usesContinuousDesktopScroll = () =>
+    window.matchMedia("(min-width: 768px) and (pointer: fine)").matches &&
+    !document.documentElement.classList.contains("reader-phone")
+
   const beginNativeScroll = useCallback(() => {
+    if (usesContinuousDesktopScroll()) return
     const scroller = feedRef.current
     if (!scroller || nativeScrollRef.current) return
     scrollAnimationRef.current?.stop()
@@ -236,6 +241,7 @@ export function SwipeFeed({ initialArticles, allTags, initialReadingArticle }: S
   }, [])
 
   const endNativeScroll = useCallback((cancelled: boolean) => {
+    if (usesContinuousDesktopScroll()) return
     const scroller = feedRef.current
     const origin = nativeScrollRef.current
     if (!scroller || !origin) return
