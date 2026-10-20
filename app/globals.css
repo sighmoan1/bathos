@@ -328,6 +328,10 @@ html.reader-phone { font-size: calc(16px * var(--reader-phone-scale, 1)); }
 
 /* Wide screens with a real pointer: a centred card, rail beside it, arrows at the edge. */
 @media (min-width: 768px) {
+  /* Desktop readers scroll through the feed continuously. Touch layouts keep
+     the one-card-per-swipe interaction. */
+  html:not(.reader-phone) .feed-scroller { scroll-snap-type: none; }
+  html:not(.reader-phone) .feed-slide { scroll-snap-align: none; scroll-snap-stop: normal; }
   html:not(.reader-phone) .feed-shell { --feed-bar: 4rem; --feed-rail-space: 0px; }
   html:not(.reader-phone) .feed-topbar { padding-inline: 1.5rem; }
   html:not(.reader-phone) .feed-links { display: flex; gap: .25rem; margin-left: 1rem; }
