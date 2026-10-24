@@ -16,7 +16,6 @@
   "dependencies": {
     "@bathos/design-system": "https://github.com/sighmoan1/bathos-design-system/releases/download/v1.0.1/bathos-design-system-1.0.1.tgz",
     "@emotion/is-prop-valid": "latest",
-    "@hookform/resolvers": "^3.10.0",
     "@radix-ui/react-accordion": "1.2.2",
     "@radix-ui/react-alert-dialog": "1.1.4",
     "@radix-ui/react-aspect-ratio": "1.1.1",
@@ -54,7 +53,7 @@
     "gray-matter": "4.0.3",
     "input-otp": "1.4.1",
     "lucide-react": "^0.454.0",
-    "next": "16.4.0",
+    "next": "16.4.1",
     "next-themes": "^0.4.6",
     "parse5": "7.3.0",
     "react": "19.2.0",
@@ -72,8 +71,7 @@
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
     "unified": "11.0.5",
-    "vaul": "^1.1.2",
-    "zod": "3.25.76"
+    "vaul": "^1.1.2"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.0",

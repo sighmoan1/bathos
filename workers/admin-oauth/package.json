@@ -11,5 +11,8 @@
   },
   "dependencies": {
     "yaml": "2.9.1"
+  },
+  "overrides": {
+    "undici": "7.30.1"
   }
 }
