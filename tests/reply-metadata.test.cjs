@@ -83,7 +83,8 @@ test('conventional server-rendered article and canonical no-JS fallback contain 
     '@/lib/articles': {getAllArticles: () => [article], getAllTags: () => []},
     'next/navigation': {notFound() { throw Error('missing article'); }},
     'react-markdown': ({children}) => React.createElement('p', null, children),
-    '../../articles/reading.module.css': {page: 'page', header: 'header', main: 'main'},
+    '@/app/articles/reading.module.css': {page: 'page', header: 'header', main: 'main'},
+    './swipe-feed': {SwipeFeed: () => null},
     '@/components/swipe-feed': {SwipeFeed: () => null},
   };
   const {default: Read} = load('app/read/[slug]/page.tsx', mocks);
@@ -94,5 +95,8 @@ test('conventional server-rendered article and canonical no-JS fallback contain 
   assert.equal((conventional.match(/class="u-in-reply-to /g) || []).length, 1);
   const {default: Post} = load('app/posts/[slug]/page.tsx', mocks);
   const canonical = renderToStaticMarkup(await Post({params: Promise.resolve({slug: 'reply'})}));
-  assert.match(canonical, /<noscript>[\s\S]*class="u-in-reply-to [^"]*" href="https:\/\/example.com\/original"[\s\S]*<\/noscript>/);
+  assert.match(canonical, /class="u-in-reply-to [^"]*" href="https:\/\/example.com\/original"/);
+  assert.match(canonical, /Reply body/);
+  assert.equal((canonical.match(/class="h-entry"/g) || []).length, 1);
+  assert.doesNotMatch(canonical, /<noscript>|feed-slide/);
 });

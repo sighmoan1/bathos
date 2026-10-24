@@ -75,10 +75,21 @@ for (const javaScriptEnabled of [false, true]) {
 
 test.describe('entry points without JavaScript', () => {
   test.use({ javaScriptEnabled: false })
-  test('canonical swipe links offer full readable content', async ({ page }) => {
+  test('canonical swipe links serve the complete requested article before JavaScript', async ({ page }) => {
     for (const article of articles) {
       await page.goto(`/posts/${encodeURIComponent(article.slug)}/`)
       await expect(page.locator('[data-swipe-reader]')).toBeHidden()
+      await expect(page.locator('article')).toHaveCount(1)
+      await expect(page.locator('article h1')).toHaveText(article.title)
+      await expect(page.locator('.feed-slide')).toHaveCount(0)
+      const expectedHTML = renderToStaticMarkup(React.createElement(ArticleMarkdownContent, { children: article.content }))
+      const expectedText = await page.evaluate((html) => {
+        const template = document.createElement('template')
+        template.innerHTML = html
+        return template.content.textContent?.replace(/\s+/g, ' ').trim()
+      }, expectedHTML)
+      expect((await page.locator('.article-prose').textContent())?.replace(/\s+/g, ' ').trim()).toBe(expectedText)
+      await expect(page.locator('link[rel="alternate"][type="text/markdown"]')).toHaveAttribute('href', `https://bathos.org/posts/${encodeURIComponent(article.slug)}/index.md`)
       await page.getByRole('link', { name: 'Read this article without JavaScript' }).click()
       await expect(page.locator('article h1')).toHaveText(article.title)
       await expect(page.locator('.article-prose')).toBeVisible()
