@@ -2,8 +2,8 @@ import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { getAllArticles, getAllTags } from "@/lib/articles"
 import { postPath } from "@/lib/post-links"
-import { ReplyContext } from "@/components/reply-context"
-import { SwipeFeed } from "@/components/swipe-feed"
+import { StaticArticle } from "@/components/static-article"
+import { PostReaderEntry } from "@/components/post-reader-entry"
 
 export const dynamicParams = false
 
@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `${article.title} | Bathos`,
     description: article.description,
-    alternates: { canonical: url },
+    alternates: { canonical: url, types: { "text/markdown": `${url}index.md` } },
     openGraph: { title: article.title, description: article.description, url, type: "article" },
     twitter: { card: "summary", title: article.title, description: article.description },
   }
@@ -33,17 +33,8 @@ export default async function Post({ params }: Props) {
   const article = articles.find((post) => post.slug === slug)
   if (!article) notFound()
   return (
-    <>
-      <noscript>
-        <style>{`[data-swipe-reader] { display: none !important; }`}</style>
-        <main className="mx-auto max-w-3xl p-6">
-          <h1 className="text-3xl font-bold">{article.title}</h1>
-          <ReplyContext inReplyTo={article.inReplyTo} />
-          <p className="mt-4"><a className="text-accent underline" href={`/read/${encodeURIComponent(article.slug)}/`}>Read this article without JavaScript</a></p>
-          <p className="mt-4"><a className="text-accent underline" href="/articles/">Browse all articles</a></p>
-        </main>
-      </noscript>
-      <div data-swipe-reader className="contents"><SwipeFeed initialArticles={articles} allTags={getAllTags(articles)} initialReadingArticle={article} /></div>
-    </>
+    <PostReaderEntry articles={articles} allTags={getAllTags(articles)} article={article}>
+      <StaticArticle article={article} canonicalEntry />
+    </PostReaderEntry>
   )
 }

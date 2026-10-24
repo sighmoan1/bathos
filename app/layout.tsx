@@ -31,6 +31,7 @@ export default function RootLayout({
       <head>
         <link rel="sitemap" type="application/xml" href="https://bathos.org/sitemap.xml" />
         <link rel="describedby" type="application/json" href="https://bathos.org/articles.json" />
+        <link rel="describedby" type="text/plain" href="https://bathos.org/llms.txt" />
       </head>
       <body className={`font-sans antialiased`}>
         {children}

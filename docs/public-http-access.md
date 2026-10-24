@@ -45,7 +45,7 @@ change the zone-wide Browser Integrity Check toggle.
 (http.host eq "bathos.org"
  and http.request.method in {"GET" "HEAD"}
  and (
-   http.request.uri.path in {"/" "/articles" "/articles/" "/articles.json" "/rss.xml" "/sitemap.xml" "/robots.txt"}
+   http.request.uri.path in {"/" "/articles" "/articles/" "/articles.json" "/rss.xml" "/sitemap.xml" "/robots.txt" "/llms.txt" "/agent-posts.json" "/mcp-guide" "/mcp-guide/"}
    or starts_with(http.request.uri.path, "/read/")
    or starts_with(http.request.uri.path, "/posts/")
  ))
@@ -98,3 +98,19 @@ record the rollback timestamp, and reopen/retain #50 if agent access regresses.
 References: [Browser Integrity Check](https://developers.cloudflare.com/waf/tools/browser-integrity-check/),
 [Configuration Rules settings](https://developers.cloudflare.com/rules/configuration-rules/settings/),
 [Create a rule via API](https://developers.cloudflare.com/rules/configuration-rules/create-api/).
+
+## Recheck during agent-access release (24 October 2026)
+
+Before the #128 release, unauthenticated GETs to `/robots.txt` and
+`/articles.json` returned 200 with the expected content types for `curl/8.0`;
+`Python-urllib/3.14` returned 403 for both. The robots policy permits public
+crawling. No zone configuration was changed: no Cloudflare API credentials were
+available, and the dashboard required sign-in. This is not deployment evidence
+for the exception above; keep #50 open until its acceptance checks pass.
+
+The public-read exception now includes `/llms.txt`, `/agent-posts.json` and the
+MCP setup guide. Existing `/posts/` matching covers the Markdown alternatives.
+`/mcp` and `/mcp/` use POST and are intentionally outside this GET/HEAD rule.
+Inspect any failed MCP request's security event before proposing an additional
+endpoint-specific exception. Preserve every publishing and subscription path,
+all authentication, WAF and rate limits, and all unrelated settings.
