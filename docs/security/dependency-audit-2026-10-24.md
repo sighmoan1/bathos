@@ -47,6 +47,10 @@ test and deploy-tool dependencies, not packages bundled into the production
 Worker code. The override repairs the toolchain too, without downgrading it or
 ignoring audit entries.
 
+After the patch and clean `npm ci`, both `workers/admin-oauth` and
+`workers/webmention` report **zero findings** from npm audit. The website and
+both Worker toolchains therefore have zero findings in this review.
+
 ## References
 
 - Vendor's patched versions and prerequisites:
