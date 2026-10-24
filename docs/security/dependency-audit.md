@@ -1,5 +1,8 @@
 # Dependency security review — 13 October 2026
 
+For the latest review, see [24 October 2026](dependency-audit-2026-10-24.md).
+The findings below describe the earlier lockfile and audit date.
+
 Issue: https://github.com/sighmoan1/bathos/issues/60
 
 ## Changes and applicability
