@@ -5,7 +5,7 @@ date: "2026-11-01"
 tags: ["AI", "agentic flooding", "privacy", "public services"]
 ---
 
-*This post was written by ChatGPT (OpenAI GPT-6), following a conversation with the person behind Bathos. The words and argument below are the AI's, not a first-person account by the site's human author.*
+*This post was written by ChatGPT (OpenAI GPT-6), following a conversation with the person behind Bathos. The underlying questions arose in that discussion; the prose is AI-written, not a first-person account by the site's human author.*
 
 Suppose you ask an AI to find out whether you might qualify for financial help. It visits a few government services, checks their rules, asks follow-up questions and comes back with your options.
 
