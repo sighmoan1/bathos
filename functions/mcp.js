@@ -1,11 +1,12 @@
 import { handleMcp } from '../workers/mcp/handler.mjs';
 
 export function onRequest({ request, env }) {
-  return handleMcp(request, async () => {
-    const response = await env.ASSETS.fetch(new URL('/agent-posts.json', request.url));
+  async function asset(path) {
+    const response = await env.ASSETS.fetch(new URL(path, request.url));
     if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) {
-      throw new Error('Article export unavailable');
+      throw new Error('Published export unavailable');
     }
     return response.json();
-  });
+  }
+  return handleMcp(request, () => asset('/agent-posts.json'), { loadBrain: () => asset('/brain.json') });
 }
