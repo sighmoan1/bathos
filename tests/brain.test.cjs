@@ -70,13 +70,16 @@ test('dialogue fetch is fixed, bounded, paginated and does not equate account wi
   });
   const data = result.result.structuredContent;
   assert.equal(fetched, 'https://api.github.com/repos/sighmoan1/bathos/issues/137/comments?per_page=50&page=2');
-  assert.equal(options.redirect, 'error'); assert.equal(options.headers.Authorization, undefined);
+  assert.equal(options.redirect, 'manual'); assert.equal(options.headers.Authorization, undefined);
   assert.equal(data.nextPage, 3); assert.equal(data.complete, false);
   assert.match(data.comments[0].authorship, /must be established/);
   assert.equal(data.comments[0].url, 'https://github.com/sighmoan1/bathos/issues/137#issuecomment-42');
   const unavailable = await callBrainTool('get_brain_dialogue', { thread: 'topic' }, graph, async () => new Response('', { status: 429 }));
   assert.equal(unavailable.result.isError, true); assert.equal(unavailable.result.structuredContent.complete, false);
   assert.equal(unavailable.result.structuredContent.status, 'unavailable');
+  assert.equal(unavailable.result.structuredContent.reason, 'github-http-429');
+  const redirect = await callBrainTool('get_brain_dialogue', { thread: 'topic' }, graph, async () => new Response('', { status: 302, headers: { location: 'https://evil.example' } }));
+  assert.equal(redirect.result.isError, true); assert.equal(redirect.result.structuredContent.reason, 'github-http-302');
 });
 test('the actual seed ledger is valid and does not invent independent readers or author replies', async () => {
   const seed = JSON.parse(fs.readFileSync(require('node:path').join(__dirname, '../brain/ledger.json')));
