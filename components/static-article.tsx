@@ -3,6 +3,7 @@ import { ArticleMarkdownContent } from "./article-markdown"
 import { WebmentionResponses } from "./webmention-responses"
 import { ReplyContext } from "./reply-context"
 import { WebmentionAdoptionLink } from "./webmention-adoption-link"
+import { BrainLinks } from "./brain-links"
 import { postPath } from "@/lib/post-links"
 import styles from "@/app/articles/reading.module.css"
 
@@ -15,6 +16,7 @@ export function StaticArticle({ article, canonicalEntry = false }: { article: Ar
       <header className={styles.header}>
         <nav aria-label="Reading navigation">
           <a href="/articles/">All articles</a>
+          <a href="/brain/">Brain</a>
           {canonicalEntry
             ? <a href={`/read/${encodeURIComponent(article.slug)}/`}>Read this article without JavaScript</a>
             : <a href={postPath(article.slug)}>Open in swipe reader</a>}
@@ -33,6 +35,7 @@ export function StaticArticle({ article, canonicalEntry = false }: { article: Ar
             </ul>}
           </header>
           <div className={`e-content article-prose ${styles.main}`}><ArticleMarkdownContent>{article.content}</ArticleMarkdownContent></div>
+          <BrainLinks slug={article.slug} />
           <WebmentionResponses target={`https://bathos.org${postPath(article.slug)}`} />
           <WebmentionAdoptionLink targetUrl={`https://bathos.org${postPath(article.slug)}`} />
         </article>

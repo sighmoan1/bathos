@@ -86,6 +86,9 @@ test('conventional server-rendered article and canonical no-JS fallback contain 
     '@/app/articles/reading.module.css': {page: 'page', header: 'header', main: 'main'},
     './swipe-feed': {SwipeFeed: () => null},
     '@/components/swipe-feed': {SwipeFeed: () => null},
+    // These synthetic articles have no on-disk archive. Real brain links are
+    // exercised by tests/e2e/brain.spec.ts, including no-JavaScript rendering.
+    './brain-links': {BrainLinks: () => null},
   };
   const {default: Read} = load('app/read/[slug]/page.tsx', mocks);
   const conventional = renderToStaticMarkup(await Read({params: Promise.resolve({slug: 'reply'})}));

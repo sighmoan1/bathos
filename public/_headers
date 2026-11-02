@@ -53,3 +53,12 @@
 /posts/*/index.md
   Content-Type: text/markdown; charset=utf-8
   Cache-Control: public, max-age=0, must-revalidate
+
+/brain/
+  Cache-Control: public, max-age=0, must-revalidate
+/brain.json
+  Content-Type: application/json; charset=utf-8
+  Cache-Control: public, max-age=0, must-revalidate
+/brain-agent.md
+  Content-Type: text/markdown; charset=utf-8
+  Cache-Control: public, max-age=0, must-revalidate

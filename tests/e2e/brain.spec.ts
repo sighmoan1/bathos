@@ -1,0 +1,60 @@
+import { test, expect } from '@playwright/test'
+
+test('brain exports evidence and filters conversations without losing their context', async ({ page, request }) => {
+  const response = await request.get('/brain.json')
+  expect(response.ok()).toBeTruthy()
+  const brain = await response.json()
+  expect(brain.version).toBe(1)
+  expect(brain.readers.length).toBeGreaterThan(0)
+  expect(brain.entries.length).toBeGreaterThan(0)
+  await page.goto('/brain/')
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('A brain full of witnesses.')
+  await page.getByRole('searchbox', { name: 'Find an idea' }).fill('priority')
+  await expect(page.locator('#authority-and-curiosity')).toBeVisible()
+  await expect(page.locator('#perspectives-without-a-diagnosis')).toHaveCount(0)
+  await expect(page.locator('#priority-can-still-extract-identity')).toBeVisible()
+  await page.locator('#authority-at-the-boundary summary').click()
+  await expect(page.locator('#authority-at-the-boundary blockquote')).toHaveCount(2)
+  await expect(page.locator('#authority-at-the-boundary blockquote').first()).toContainText('Prioritising agents')
+  await page.getByRole('searchbox').fill('')
+  await page.getByLabel('Show threads with').selectOption('perspective')
+  await expect(page.locator('#perspectives-without-a-diagnosis')).toBeVisible()
+  await expect(page.locator('#authority-and-curiosity')).toHaveCount(0)
+  await page.getByLabel('Show threads with').selectOption('all')
+  const overflow = await page.evaluate(() => Array.from(document.querySelectorAll('main, input, select')).some(element => element.getBoundingClientRect().right > window.innerWidth + 2))
+  expect(overflow).toBe(false)
+})
+
+test('live replies are on demand, escaped, and distinguish failure from silence', async ({ page }) => {
+  let calls = 0, fail = true
+  await page.route('**/mcp', async route => {
+    calls++
+    const body = route.request().postDataJSON()
+    expect(body.params.name).toBe('get_brain_dialogue')
+    if (fail) await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: { message: 'Unavailable' } }) })
+    else await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ jsonrpc: '2.0', id: 1, result: { structuredContent: { status: 'available', comments: [{ id: 42, account: 'sighmoan1', body: 'Written by an agent. <img src=x onerror=alert(1)>', createdAt: '2026-11-02T00:00:00Z', truncated: false }], nextPage: null, complete: true } } }) })
+  })
+  await page.goto('/brain/')
+  expect(calls).toBe(0)
+  await page.getByRole('button', { name: 'Read latest replies' }).click()
+  await expect(page.locator('#authority-and-curiosity').getByRole('alert')).toContainText('does not mean nobody has replied')
+  fail = false
+  await page.getByRole('button', { name: 'Read latest replies' }).click()
+  await expect(page.getByText('Written by an agent. <img src=x onerror=alert(1)>', { exact: true })).toBeVisible()
+  await expect(page.locator('#authority-and-curiosity img')).toHaveCount(0)
+  await expect(page.getByText('Comment by account sighmoan1', { exact: true })).toBeVisible()
+  expect(calls).toBe(2)
+})
+
+test('dialogue and article connections remain readable without JavaScript', async ({ browser, baseURL }) => {
+  const context = await browser.newContext({ javaScriptEnabled: false, baseURL })
+  const page = await context.newPage()
+  await page.goto('/brain/')
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('A brain full of witnesses')
+  await expect(page.locator('#authority-at-the-boundary')).toContainText('My provisional reading')
+  await page.locator('#authority-at-the-boundary summary').click()
+  await expect(page.locator('#authority-at-the-boundary blockquote').first()).toBeVisible()
+  await page.goto('/read/Gassing/')
+  await expect(page.getByRole('complementary', { name: 'Connections and dialogue' })).toContainText('One principle, or different perspectives?')
+  await context.close()
+})

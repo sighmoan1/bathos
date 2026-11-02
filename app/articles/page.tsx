@@ -18,7 +18,7 @@ export default function Articles() {
     <div className={styles.page}>
       <a className={styles.skip} href="#articles">Skip to articles</a>
       <header className={styles.header}>
-        <nav aria-label="Reading navigation"><a href="/">Swipe reader</a></nav>
+        <nav aria-label="Reading navigation"><a href="/">Swipe reader</a><a href="/brain/">Brain</a></nav>
         <h1>Articles</h1>
         <p>All Bathos articles, newest first. Choose an article to read at your own pace.</p>
       </header>
