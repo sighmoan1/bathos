@@ -37,7 +37,7 @@ test('live replies are on demand, escaped, and distinguish failure from silence'
   await page.goto('/brain/')
   expect(calls).toBe(0)
   await page.getByRole('button', { name: 'Read latest replies' }).click()
-  await expect(page.getByRole('alert')).toContainText('does not mean nobody has replied')
+  await expect(page.locator('#authority-and-curiosity').getByRole('alert')).toContainText('does not mean nobody has replied')
   fail = false
   await page.getByRole('button', { name: 'Read latest replies' }).click()
   await expect(page.getByText('Written by an agent. <img src=x onerror=alert(1)>', { exact: true })).toBeVisible()
